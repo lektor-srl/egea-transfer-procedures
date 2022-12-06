@@ -1,0 +1,20 @@
+{
+    "require": {
+        "google/cloud-storage": "^1.29",
+        "nicolab/php-ftp-client": "^2.0",
+      "ext-mysqli": "*",
+        "phpmailer/phpmailer": "^6.6"
+    },
+    "autoload": {
+        "files": [
+            "Entities/AttachmentsMain.php",
+            "Entities/FlowsMain.php",
+            "Entities/Config.php",
+            "Entities/Storage.php",
+            "Entities/Ftp.php",
+            "Entities/Log.php",
+            "Entities/DB.php",
+            "Entities/Mail.php"
+        ]
+    }
+}
