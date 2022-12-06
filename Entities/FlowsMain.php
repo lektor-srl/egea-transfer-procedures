@@ -18,6 +18,7 @@ class FlowsMain{
         error_reporting(E_ALL);
 
         try {
+            $this->mode = $this->detectMode();
 
             $this->log = Log::getInstance();
             $this->storage = Storage::getInstance();
@@ -36,9 +37,28 @@ class FlowsMain{
 
     private function exec(){
         try {
-            $this->log->info('Start flows script');
+            $this->log->info('Start flows script, "'.$this->mode.'" mode selected');
+
+            switch ($this->mode) {
+                case 'download':
+                    foreach (Config::$utilities as $utility){
+                        // Get the folder from Ftp
+                        if($utility['name'] != 'egea_alpiacque'){continue; } //todo:: debug - da togliere in prod
+
+                        $this->log->info('Downloading files from "'. $utility['name'].'"');
+                        $this->ftp->getFolder($utility['ftpFolder'].'/LET/DW', $utility['name']);
+
+                        // Upload the folder in the winshared
+
+                    }
+                    break;
 
 
+                case 'upload':
+                    echo "ok";
+                    break;
+
+            }
         } catch (Exception $e){
             $this->log->exceptionError($e);
 
@@ -52,5 +72,23 @@ class FlowsMain{
     {
         $this->log->info('End flows script. ');
         $this->log->info("\n\n", ['logDB' => false, 'logFile' => false]);
+    }
+
+    /**
+     * @return string|null Attachment mode selected
+     * @throws Exception
+     */
+    private function detectMode():string|null
+    {
+        $args = getopt("", ["mode:"]);
+
+        if(!$args || $args == ''){
+            throw new Exception('No mode selected: --mode=download|upload');
+        }
+        if(!in_array($args['mode'], Config::$modesAvailable)){
+            throw new Exception('Mode malformed!');
+        }
+
+        return $args['mode'];
     }
 }
