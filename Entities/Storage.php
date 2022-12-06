@@ -61,10 +61,7 @@ class Storage extends StorageClient{
 
             foreach ($objects as $object) {
 
-                if($i >= Config::$maxDownload){
-                    throw new Exception('Interrotto inaspettatamente - controllato');
-                    //return $counter;
-                } //todo::debug - da togliere
+                if($i >= Config::$maxDownload){return $counter;} //todo::debug - da togliere
 
                 if(!$this->checkObject($object)){
                     continue;
