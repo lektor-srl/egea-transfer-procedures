@@ -10,7 +10,8 @@ class FlowsMain{
     private Storage $storage;
     private Ftp $ftp;
     private Log $log;
-    private DB $DB;
+    private DB $DBLocal;
+    private DB $DBGoogle;
 
     public function __construct()
     {
@@ -23,7 +24,8 @@ class FlowsMain{
             $this->log = Log::getInstance();
             $this->storage = Storage::getInstance();
             $this->ftp = Ftp::getInstance();
-            $this->DB = DB::getInstance();
+            $this->DBLocal = DB::getInstance();
+            $this->DBGoogle = DB::getInstance('google');
 
             // If no errors detected, launch the application
             $this->exec();
@@ -41,6 +43,7 @@ class FlowsMain{
 
             switch ($this->mode) {
                 case 'download':
+                    $nDownload = 0;
                     foreach (Config::$utilities as $utility){
                         // Get the folder from Ftp
                         if($utility['name'] != 'egea_alpiacque'){continue; } //todo:: debug - da togliere in prod
@@ -57,7 +60,7 @@ class FlowsMain{
                         }
 
                         //2- Controllo sul DB di Google se esistono i files
-                        $filesDB = [
+                        $filesDB = [ // todo:: usati come test
                             '02_0000000866_P1_70_1.csv',
                             '02_P1_31_3110_2.csv',
                             '02_P1_31_3111_3.csv',
@@ -77,15 +80,30 @@ class FlowsMain{
                             }
 
                             //4- Sposto il file nell'ambiente shared
+                            //todo:: con il rename sposta il file. Considerare se copiare o lasciare cosi
                             if(!rename(
                                 Config::$runtimePath.'/'. $fileNameToDownload,
                                 Config::$winShare . '/IN/' . $utility['sharedFolder'] .'/Acqua Massiva/' . $fileNameToDownload)){
                                 throw new Exception('Unable to copy the file ' . $fileNameToDownload);
                             }
 
-                            $this->log->info('Files scaricati');
+                            //5- Scrittura a DB google nuovo record
+                            //todo:: sql-> insert into flussi_file
+                            // (nome_flusso, data_rilevamento, ora_rilevamento, data_trasferimento, ora_trasferimento, flag_importato_da_cartella_in)
+                            // values ()
+
+                            //6- Log a DB locale dei files passati
+                            $query = $this->DBLocal->prepare("INSERT INTO files_download (nome_flusso, codice_ente, sede_id) values (?,?,?)");
+                            $query->bind_param('sss',$fileNameToDownload, $utility['codice_ente'], $utility['sede_id'] );
+
+                            if(!$query->execute()){
+                                throw new Exception('Unable to save data into local database');
+                            }
+
+                            $nDownload++;
                         }
 
+                        $this->log->info('Nuovi files scaricati: ' . $nDownload);
                     }
                     break;
 

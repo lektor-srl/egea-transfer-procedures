@@ -6,18 +6,32 @@ use mysqli;
 
 class DB extends mysqli {
 
-    private static ?DB $_instance = null;
+    private static ?DB $_localInstance = null;
 
 
-    public function __construct()
+    public function __construct(string $type = 'local')
     {
         try {
-            parent::__construct(
-                Config::$DBProps['host'],
-                Config::$DBProps['username'],
-                Config::$DBProps['password'],
-                Config::$DBProps['dbName']
-            );
+            switch ($type){
+                case 'google':
+                    parent::__construct(
+                        Config::$googleDBProps['host'],
+                        Config::$googleDBProps['username'],
+                        Config::$googleDBProps['password'],
+                        Config::$googleDBProps['dbName']
+                    );
+                    break;
+
+                default:
+                    parent::__construct(
+                        Config::$localDBProps['host'],
+                        Config::$localDBProps['username'],
+                        Config::$localDBProps['password'],
+                        Config::$localDBProps['dbName']
+                    );
+                    break;
+            }
+
         }catch (Exception $e){
             throw $e;
         }
@@ -32,13 +46,24 @@ class DB extends mysqli {
      * @return DB Return a new or last DB object instance created
      * @throws Exception
      */
-    public static function getInstance():DB
+    public static function getInstance(string $type = 'local'):DB
     {
         try {
-            if (self::$_instance == null) {
-                self::$_instance = new DB();
+            switch ($type){
+                case 'google':
+                    if (self::$_localInstance == null) {
+                        self::$_localInstance = new DB('google');
+                    }
+                    break;
+
+                default:
+                    if (self::$_localInstance == null) {
+                        self::$_localInstance = new DB('local');
+                    }
+                break;
             }
-            return self::$_instance;
+
+            return self::$_localInstance;
         }catch (Exception $e){
             throw $e;
         }

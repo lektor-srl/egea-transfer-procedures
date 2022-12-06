@@ -23,7 +23,7 @@ class Log{
             }
 
             $this->_file = fopen(Config::$logPath.$fileName, 'a+', );
-            $this->_DB = DB::getInstance();
+            $this->_DB = DB::getInstance('local');
             $this->_mail = Mail::getInstance();
 
         }catch (Exception $e){
