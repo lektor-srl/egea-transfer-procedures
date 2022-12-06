@@ -50,16 +50,29 @@ class Ftp extends FtpClient{
         }
 
     }
-    public function getFolder(string $sourceSubPath, string $targetDirectory):void
+
+    /** Provide to download an entire folder from Ftp. Return the files list downloaded
+     * @param string $sourceSubPath
+     * @param string $targetDirectory
+     * @return array The files list dowloaded
+     * @throws \FtpClient\FtpException
+     */
+    public function getFolder(string $sourceSubPath, string $targetDirectory):array
     {
         try {
             $this->createFolder(Config::$pathFiles.'/'.$targetDirectory);
-
             $this->getAll($sourceSubPath, Config::$pathFiles.'/'.$targetDirectory);
+
+            return array_diff(scandir(Config::$pathFiles.'/'.$targetDirectory), array('..', '.'));
         }catch (Exception $e){
             throw $e;
         }
 
+    }
+
+    public function scanDir($directory = '.', $recursive = false)
+    {
+        return parent::scanDir($directory, $recursive);
     }
 
     /** Provide to create a folder recursively

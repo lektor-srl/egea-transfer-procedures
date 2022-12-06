@@ -46,9 +46,45 @@ class FlowsMain{
                         if($utility['name'] != 'egea_alpiacque'){continue; } //todo:: debug - da togliere in prod
 
                         $this->log->info('Downloading files from "'. $utility['name'].'"');
-                        $this->ftp->getFolder($utility['ftpFolder'].'/LET/DW', $utility['name']);
 
-                        // Upload the folder in the winshared
+
+                        // 1- Scan della cartella FTP per prendere i nomi dei files
+                        $folder = $utility['ftpFolder'] . '/LET/DW';
+
+                        $filesFtp = [];
+                        foreach ($this->ftp->scanDir($folder) as $key => $fileData){
+                            $filesFtp[] = $fileData['name'];
+                        }
+
+                        //2- Controllo sul DB di Google se esistono i files
+                        $filesDB = [
+                            '02_0000000866_P1_70_1.csv',
+                            '02_P1_31_3110_2.csv',
+                            '02_P1_31_3111_3.csv',
+                            '02_P1_31_3115_5.csv',
+                            '02_P1_31_313_7.csv',
+                        ];//todo:: sql-> select nome_flusso from flussi_file where nome_flusso = $filename
+
+                        //3- Scarico solo i files che non ci sono ancora
+                        $filesToDownload = array_diff($filesFtp, $filesDB);
+
+                        foreach ($filesToDownload as $fileNameToDownload){
+
+                            $filePathToDownload = $folder . '/' . $fileNameToDownload;
+
+                            if(!$this->ftp->get(Config::$runtimePath. '/' . $fileNameToDownload, $filePathToDownload, 1)){
+                                throw new Exception('Unable to download the file '. $fileNameToDownload);
+                            }
+
+                            //4- Sposto il file nell'ambiente shared
+                            if(!rename(
+                                Config::$runtimePath.'/'. $fileNameToDownload,
+                                Config::$winShare . '/IN/' . $utility['sharedFolder'] .'/Acqua Massiva/' . $fileNameToDownload)){
+                                throw new Exception('Unable to copy the file ' . $fileNameToDownload);
+                            }
+
+                            $this->log->info('Files scaricati');
+                        }
 
                     }
                     break;
@@ -90,5 +126,18 @@ class FlowsMain{
         }
 
         return $args['mode'];
+    }
+
+
+    private function createFolder(string $folder):void
+    {
+        try {
+            if(!is_dir($folder)){
+                mkdir($folder, 777, true);
+                $this->log->info('Created folder "'.$folder.'"');
+            }
+        }catch (Exception $e){
+            throw $e;
+        }
     }
 }
