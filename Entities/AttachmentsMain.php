@@ -46,7 +46,7 @@ class AttachmentsMain{
      */
     private function exec(){
         try {
-            $this->log->info('Start script, "'.$this->mode.'" mode selected');
+            $this->log->info('Start attachments script, "'.$this->mode.'" mode selected');
 
             switch ($this->mode){
                 case 'download':
@@ -60,11 +60,11 @@ class AttachmentsMain{
 
                 case 'upload':
                     foreach (Config::$utilities as $utility){
-                        $this->log->info('Uploading attachments to "'. $utility['uploadFolder'].'"');
+                        $this->log->info('Uploading attachments to "'. $utility['ftpFolder'].'"');
 
-                        $this->ftp->uploadFolder('/'.$utility['uploadFolder'].'/IMG/UP/testLektor/', $utility['name'].'/');
+                        $this->ftp->uploadFolder('/'.$utility['ftpFolder'].'/IMG/UP/testLektor/', $utility['name'].'/');
 
-                        $this->log->info('Utility "'.$utility['name'].'" uploaded to '.$utility['uploadFolder']);
+                        $this->log->info('Utility "'.$utility['name'].'" uploaded to '.$utility['ftpFolder']);
                     }
 
                     break;
