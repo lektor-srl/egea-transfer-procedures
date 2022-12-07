@@ -1,5 +1,6 @@
 <?php
 namespace Entities;
+use DateTime;
 use Exception;
 
 /**
@@ -46,7 +47,6 @@ class FlowsMain{
                     $nDownload = 0;
                     foreach (Config::$utilities as $utility){
                         // Get the folder from Ftp
-                        if($utility['name'] != 'egea_alpiacque'){continue; } //todo:: debug - da togliere in prod
 
                         $this->log->info('Downloading files from "'. $utility['name'].'"');
 
@@ -56,17 +56,23 @@ class FlowsMain{
 
                         $filesFtp = [];
                         foreach ($this->ftp->scanDir($folder) as $key => $fileData){
-                            $filesFtp[] = $fileData['name'];
+                            if(str_contains($fileData['name'], 'LEKTOR')){
+                                $filesFtp[] = $fileData['name'];
+                            }
+
                         }
 
                         //2- Controllo sul DB di Google se esistono i files
-                        $filesDB = [ // todo:: usati come test
-                            '02_0000000866_P1_70_1.csv',
-                            '02_P1_31_3110_2.csv',
-                            '02_P1_31_3111_3.csv',
-                            '02_P1_31_3115_5.csv',
-                            '02_P1_31_313_7.csv',
-                        ];//todo:: sql-> select nome_flusso from flussi_file where nome_flusso = $filename
+                        $query = $this->DBGoogle->query
+                        ("SELECT nome_flusso FROM flussi_file 
+                                WHERE codice_ente = '".$utility['codice_ente']."' 
+                                AND sede_id = '".$utility['sede_id']."'");
+
+                        $filesDB = [];
+                        while($data = $query->fetch_assoc()){
+                            $filesDB[] = $data['nome_flusso'];
+                        }
+
 
                         //3- Scarico solo i files che non ci sono ancora
                         $filesToDownload = array_diff($filesFtp, $filesDB);
@@ -83,17 +89,33 @@ class FlowsMain{
                             //todo:: con il rename sposta il file. Considerare se copiare o lasciare cosi
                             if(!rename(
                                 Config::$runtimePath.'/'. $fileNameToDownload,
-                                Config::$winShare . '/IN/' . $utility['sharedFolder'] .'/Acqua Massiva/' . $fileNameToDownload)){
+                                Config::$winShare . '/IN/' . $utility['sharedFolder'] .'/' . $fileNameToDownload)){
                                 throw new Exception('Unable to copy the file ' . $fileNameToDownload);
+                                //todo:: causa interruzione del programma. Considerare se continuare con il prossimo file
                             }
 
                             //5- Scrittura a DB google nuovo record
-                            //todo:: sql-> insert into flussi_file
-                            // (nome_flusso, data_rilevamento, ora_rilevamento, data_trasferimento, ora_trasferimento, flag_importato_da_cartella_in)
-                            // values ()
+                            $now = new DateTime();
+                            $data = $now->format('Y-m-d');
+                            $ora = $now->format('H:i:s');
+
+                            $query = $this->DBGoogle->prepare(
+                                "INSERT INTO flussi_file (
+                                         nome_flusso,
+                                         data_rilevamento, 
+                                         ora_rilevamento, 
+                                         data_trasferimento_cartella_in, 
+                                         ora_trasferimento_cartella_in, 
+                                         codice_ente,
+                                         sede_id) 
+                                        VALUES (?,?,?,?,?,?,?)");
+
+                            $query->bind_param('sssssss',$fileNameToDownload, $data, $ora, $data, $ora, $utility['codice_ente'], $utility['sede_id']);
+                            $query->execute();
+
 
                             //6- Log a DB locale dei files passati
-                            $query = $this->DBLocal->prepare("INSERT INTO files_download (nome_flusso, codice_ente, sede_id) values (?,?,?)");
+                            $query = $this->DBLocal->prepare("INSERT INTO files_download (nome_flusso, codice_ente, sede_id) VALUES (?,?,?)");
                             $query->bind_param('sss',$fileNameToDownload, $utility['codice_ente'], $utility['sede_id'] );
 
                             if(!$query->execute()){
@@ -102,9 +124,8 @@ class FlowsMain{
 
                             $nDownload++;
                         }
-
-                        $this->log->info('Nuovi files scaricati: ' . $nDownload);
                     }
+                    $this->log->info('Nuovi files scaricati: ' . $nDownload);
                     break;
 
 

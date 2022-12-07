@@ -7,6 +7,7 @@ use mysqli;
 class DB extends mysqli {
 
     private static ?DB $_localInstance = null;
+    private static ?DB $_googleInstance = null;
 
 
     public function __construct(string $type = 'local')
@@ -51,19 +52,19 @@ class DB extends mysqli {
         try {
             switch ($type){
                 case 'google':
-                    if (self::$_localInstance == null) {
-                        self::$_localInstance = new DB('google');
+                    if (self::$_googleInstance == null) {
+                        self::$_googleInstance = new DB('google');
                     }
-                    break;
+                    return self::$_googleInstance;
 
                 default:
                     if (self::$_localInstance == null) {
                         self::$_localInstance = new DB('local');
                     }
-                break;
+                    return self::$_localInstance;
             }
 
-            return self::$_localInstance;
+
         }catch (Exception $e){
             throw $e;
         }
