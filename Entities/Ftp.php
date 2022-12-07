@@ -83,7 +83,7 @@ class Ftp extends FtpClient{
     {
         try {
             if(!is_dir($folder)){
-                mkdir($folder, 777, true);
+                mkdir($folder, 0777, true);
                 $this->log->info('Created folder "'.$folder.'"');
             }
         }catch (Exception $e){

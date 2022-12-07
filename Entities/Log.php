@@ -19,8 +19,11 @@ class Log{
             $fileName = $date->format(Config::$logFileNameFormat).'.log';
 
             if(!is_dir(Config::$logPath)) {
-                mkdir(Config::$logPath, 777, true);
+                mkdir(Config::$logPath, 0777, true);
             }
+
+            touch(Config::$logPath.$fileName);
+            chmod(Config::$logPath.$fileName, 0777);
 
             $this->_file = fopen(Config::$logPath.$fileName, 'a+', );
             $this->_DB = DB::getInstance('local');
