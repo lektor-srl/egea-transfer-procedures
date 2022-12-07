@@ -165,10 +165,8 @@ class FlowsMain{
                                 throw new Exception('Unable to upload file');
                             }
 
-                            //todo:: loggare sul DB per tracciatura file
-                            $query = $this->DBLocal->prepare("INSERT INTO files_upload (nome_flusso, codice_ente, sede_id) 
-                                                                    VALUES (?,?,?)");
-                            $query->bind_param('sss',$fileNameToDownload, $utility['codice_ente'], $utility['sede_id']);
+                            $query = $this->DBLocal->prepare("INSERT INTO files_upload (nome_flusso, codice_ente, sede_id) VALUES (?,?,?)");
+                            $query->bind_param('sss',$fileToUpload['nome_flusso'], $utility['codice_ente'], $utility['sede_id']);
 
                             if(!$query->execute()){
                                 throw new Exception('Unable to save data into local database');
