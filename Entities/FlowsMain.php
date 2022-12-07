@@ -56,7 +56,7 @@ class FlowsMain{
 
                         $filesFtp = [];
                         foreach ($this->ftp->scanDir($folder) as $key => $fileData){
-                            if(str_contains($fileData['name'], 'LEKTOR')){
+                            if(str_contains($fileData['name'], 'LEKTOR')){  //todo::serve per testare - da togliere in prod
                                 $filesFtp[] = $fileData['name'];
                             }
 
@@ -130,7 +130,55 @@ class FlowsMain{
 
 
                 case 'upload':
-                    echo "ok";
+                    /*
+                     * 1- prendere i nomi dei files dal Db con flag pronto per esportazione = 1
+                     * 2- prendere i files da ogni ente
+                     * 3- inviare files su ftp
+                     */
+
+                    foreach (Config::$utilities as $utility){
+                        $query = $this->DBGoogle->query("SELECT id, nome_flusso, codice_ente, sede_id 
+                                                                FROM flussi_file 
+                                                                WHERE codice_ente = '".$utility['codice_ente']."'
+                                                                AND sede_id = '".$utility['sede_id']."'                                                          
+                                                                AND flag_pronto_per_esportazione = 1");
+
+                        $filesToUpload = [];
+                        while($data = $query->fetch_assoc()){
+                            // ciclo le utilies per capire a quale
+                            $filesToUpload[] = $data;
+                        };
+
+
+                        foreach ($filesToUpload as $fileToUpload){
+                            $file = Config::$winShare.'/OUT/'.$utility['sharedFolder'].'/'.$fileToUpload['nome_flusso'];
+                            $remoteFolder = $utility['ftpFolder'].'/LET/UP/';
+
+                            if(!is_file($file)){
+                                $this->log->customError('File '.$file.', id: '.$fileToUpload['id'].' non presente');
+                                continue;
+
+                                //throw new Exception('File '.$fileToUpload['nome_flusso'].' non presente');
+                            }
+
+                            if(!$this->ftp->put($remoteFolder.$fileToUpload['nome_flusso'], $file, 1)){
+                                throw new Exception('Unable to upload file');
+                            }
+
+                            //todo:: loggare sul DB per tracciatura file
+                            $query = $this->DBLocal->prepare("INSERT INTO files_upload (nome_flusso, codice_ente, sede_id) 
+                                                                    VALUES (?,?,?)");
+                            $query->bind_param('sss',$fileNameToDownload, $utility['codice_ente'], $utility['sede_id']);
+
+                            if(!$query->execute()){
+                                throw new Exception('Unable to save data into local database');
+                            }
+                            $this->log->info('File '.$fileToUpload['nome_flusso']. ' uploaded into '.$remoteFolder);
+                        }
+                    }
+
+
+
                     break;
 
             }

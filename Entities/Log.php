@@ -91,10 +91,8 @@ class Log{
 
     public function customError(string $message):void
     {
-        $dateTime = new DateTime();
-        $logText = $dateTime->format('Y-m-d H:i:s')." - Error: ".$message;
-
-        fwrite($this->_file, $logText);
+        $e = new Exception($message);
+        $this->exceptionError($e);
     }
 
     public function exceptionError(Exception $e):void
