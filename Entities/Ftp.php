@@ -45,6 +45,7 @@ class Ftp extends FtpClient{
     {
         try {
             $this->putAll(Config::$pathAttachments . $sourceSubPath, $targetDirectory);
+            // todo::Prevedere la cancellazione della cartella una volta finito
         }catch (Exception $e){
             throw $e;
         }
