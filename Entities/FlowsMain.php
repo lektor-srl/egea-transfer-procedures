@@ -65,7 +65,6 @@ class FlowsMain{
 
                             $folder = $utility['ftpFolder'] . '/LET/DW';
                             $filePathToDownload = $folder . '/' . $fileNameToDownload;
-                            //$originalFileSize = filesize($filePathToDownload);
                             $tempFile = Config::$runtimePath. '/' . $fileNameToDownload;
 
                             // Download the single file
@@ -86,7 +85,8 @@ class FlowsMain{
                                 continue;   //continue the application for not block the program
                             }
 
-                            // Controllo la dimensione del file todo:: da verificare questo passaggio
+                            // Check the filesize to check if the file isn't corrupt todo:: da verificare questo passaggio
+//                            $originalFileSize = filesize($filePathToDownload);
 //                            if(filesize($tempFile) != $originalFileSize){
 //                                throw new Exception('File size is different '. $fileNameToDownload);
 //                            }
@@ -96,10 +96,21 @@ class FlowsMain{
                                 continue;   //continue the application for not block the program
                             }
 
-                            //5- Scrittura a DB google nuovo record
+                            // Insert a new record to GCloud DB
                             $now = new DateTime();
                             $data = $now->format('d/m/Y');
                             $ora = $now->format('H:i:s');
+
+                            $p = [
+                                'nome_flusso' => $fileNameToDownload,
+                                'data_rilevamento' => $data,
+                                'ora_rilevamento' => $ora,
+                                'data_trasferimento_cartella_in' => $data,
+                                'ora_trasferimento_cartella_in' => $ora,
+                                'flag_pronto_per_importazione_da_cartella_in' => 1,
+                                'codice_ente' => $utility['codice_ente'],
+                                'sede_id' => $utility['sede_id'],
+                            ];
 
                             $query = $this->DBGoogle->prepare(
                                 "INSERT INTO flussi_file (
@@ -112,18 +123,34 @@ class FlowsMain{
                                          codice_ente,
                                          sede_id) 
                                         VALUES (?,?,?,?,?,?,?,?)");
-                            $flag = 1; //todo:: da refactor
-                            $query->bind_param('sssssiss',$fileNameToDownload, $data, $ora, $data, $ora, $flag, $utility['codice_ente'], $utility['sede_id']);
-                            $query->execute();
+
+                            $query->bind_param('sssssiss',
+                                $p['fileNameToDownload'],
+                                $p['data_rilevamento'],
+                                $p['ora_rilevamento'],
+                                $p['data_trasferimento_cartella_in'],
+                                $p['ora_trasferimento_cartella_in'],
+                                $p['flag_pronto_per_importazione_da_cartella_in'],
+                                $p['codice_ente'],
+                                $p['sede_id']
+                            );
+                            if(!$query->execute()){
+                                $this->log->customError('Unable to insert data to GCloud DB for file ' . $fileNameToDownload, ['logMail' => false]);
+                                continue;   //continue the application for not block the program
+                            }
 
 
-                            //6- Log a DB locale dei files passati
+                            // Insert record into local Database
                             $query = $this->DBLocal->prepare("INSERT INTO files_download (nome_flusso, codice_ente, sede_id) VALUES (?,?,?)");
-                            $query->bind_param('sss',$fileNameToDownload, $utility['codice_ente'], $utility['sede_id'] );
+                            $query->bind_param('sss',
+                                $p['fileNameToDownload'],
+                                $p['codice_ente'],
+                                $p['sede_id']
+                            );
 
                             if(!$query->execute()){
-                                throw new Exception('Unable to save data into local database');
-                                //todo:: blocca lo script, considerare se fare un continue per passare al prossimo file
+                                $this->log->customError('Unable to inset data into local database for file ' . $fileNameToDownload, ['logMail' => false]);
+                                continue;   //continue the application for not block the program
                             }
 
                             $nDownload++;
