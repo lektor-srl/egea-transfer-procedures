@@ -170,7 +170,7 @@ class FlowsMain{
                                             FROM flussi_file 
                                                 WHERE codice_ente = '".$utility['codice_ente']."'
                                                 AND sede_id = '".$utility['sede_id']."'                                                          
-                                                AND flag_trasferimento_cartella_out = 1");
+                                                AND flag_esportato_cartella_out = 1");
 
                         $filesToUpload = [];
                         while($data = $query->fetch_assoc()){
@@ -182,23 +182,21 @@ class FlowsMain{
                             $remoteFolder = $utility['ftpFolder'].'/LET/UP/';
 
                             if(!is_file($file)){
-                                $this->log->customError('File '.$file.', id: '.$fileToUpload['id'].' non presente');
+                                $this->log->customError('File '.$file.', id: '.$fileToUpload['id'].' non presente', ['logMail' => false]);
                                 continue;
-
-                                //throw new Exception('File '.$fileToUpload['nome_flusso'].' non presente');
                             }
 
                             if(!$this->ftp->put($remoteFolder.$fileToUpload['nome_flusso'], $file, 1)){
-                                throw new Exception('Unable to upload file');
-                                //todo:: considerare se bloccare lo script o continuare
+                                $this->log->customError('Unable to upload file '.$file.', id: '.$fileToUpload['id'].' non presente', ['logMail' => false]);
+                                continue;
                             }
 
                             // Aggiorno il record su google
-                            $query = $this->DBGoogle->prepare("UPDATE flussi_file SET flag_esportato_cartella_out = 1 WHERE id = ?");
+                            $query = $this->DBGoogle->prepare("UPDATE flussi_file SET flag_trasferimento_cartella_out = 1 WHERE id = ?");
                             $query->bind_param('i', $fileToUpload['id']);
                             if(!$query->execute()){
-                                throw new Exception('Unable to update data with id: '.$fileToUpload['id'].' to Google database');
-                                //todo:: considerare se continuare invece di bloccare lo script
+                                $this->log->customError('Unable to update data with id: '.$fileToUpload['id'].' to Google database', ['logMail' => false]);
+                                continue;
                             }
 
                             // Log locale
@@ -206,8 +204,10 @@ class FlowsMain{
                             $query->bind_param('sss',$fileToUpload['nome_flusso'], $utility['codice_ente'], $utility['sede_id']);
 
                             if(!$query->execute()){
-                                throw new Exception('Unable to save data into local database');
+                                $this->log->customError('Unable to save data into local database', ['logMail' => false]);
+                                continue;
                             }
+
                             $this->log->info('File '.$fileToUpload['nome_flusso']. ' uploaded into '.$remoteFolder);
                             $nUpload++;
                         }
