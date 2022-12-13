@@ -56,9 +56,9 @@ class FlowsMain{
 
                         $filesFtp = [];
                         foreach ($this->ftp->scanDir($folder) as $key => $fileData){
-                            if(str_contains($fileData['name'], 'LEKTOR')){  //todo::serve per testare - da togliere in prod
+                            //if(str_contains($fileData['name'], 'LEKTOR')){  //todo::serve per testare - da togliere in prod
                                 $filesFtp[] = $fileData['name'];
-                            }
+                            //}
 
                         }
 
@@ -106,11 +106,12 @@ class FlowsMain{
                                          ora_rilevamento, 
                                          data_trasferimento_cartella_in, 
                                          ora_trasferimento_cartella_in, 
+                                         flag_pronto_per_importazione_da_cartella_in,
                                          codice_ente,
                                          sede_id) 
-                                        VALUES (?,?,?,?,?,?,?)");
-
-                            $query->bind_param('sssssss',$fileNameToDownload, $data, $ora, $data, $ora, $utility['codice_ente'], $utility['sede_id']);
+                                        VALUES (?,?,?,?,?,?,?,?)");
+                            $flag = 1; //todo:: da refactor
+                            $query->bind_param('sssssiss',$fileNameToDownload, $data, $ora, $data, $ora, $flag, $utility['codice_ente'], $utility['sede_id']);
                             $query->execute();
 
 
@@ -120,6 +121,7 @@ class FlowsMain{
 
                             if(!$query->execute()){
                                 throw new Exception('Unable to save data into local database');
+                                //todo:: blocca lo script, considerare se fare un continue per passare al prossimo file
                             }
 
                             $nDownload++;
@@ -130,25 +132,21 @@ class FlowsMain{
 
 
                 case 'upload':
-                    /*
-                     * 1- prendere i nomi dei files dal Db con flag pronto per esportazione = 1
-                     * 2- prendere i files da ogni ente
-                     * 3- inviare files su ftp
-                     */
+                    $nUpload = 0;
 
                     foreach (Config::$utilities as $utility){
-                        $query = $this->DBGoogle->query("SELECT id, nome_flusso, codice_ente, sede_id 
-                                                                FROM flussi_file 
-                                                                WHERE codice_ente = '".$utility['codice_ente']."'
-                                                                AND sede_id = '".$utility['sede_id']."'                                                          
-                                                                AND flag_pronto_per_esportazione = 1");
+                        $query = $this
+                            ->DBGoogle
+                            ->query("SELECT id, nome_flusso, codice_ente, sede_id 
+                                            FROM flussi_file 
+                                                WHERE codice_ente = '".$utility['codice_ente']."'
+                                                AND sede_id = '".$utility['sede_id']."'                                                          
+                                                AND flag_trasferimento_cartella_out = 1");
 
                         $filesToUpload = [];
                         while($data = $query->fetch_assoc()){
-                            // ciclo le utilies per capire a quale
                             $filesToUpload[] = $data;
                         };
-
 
                         foreach ($filesToUpload as $fileToUpload){
                             $file = Config::$winShare.'/OUT/'.$utility['sharedFolder'].'/'.$fileToUpload['nome_flusso'];
@@ -163,8 +161,18 @@ class FlowsMain{
 
                             if(!$this->ftp->put($remoteFolder.$fileToUpload['nome_flusso'], $file, 1)){
                                 throw new Exception('Unable to upload file');
+                                //todo:: considerare se bloccare lo script o continuare
                             }
 
+                            // Aggiorno il record su google
+                            $query = $this->DBGoogle->prepare("UPDATE flussi_file SET flag_esportato_cartella_out = 1 WHERE id = ?");
+                            $query->bind_param('i', $fileToUpload['id']);
+                            if(!$query->execute()){
+                                throw new Exception('Unable to update data with id: '.$fileToUpload['id'].' to Google database');
+                                //todo:: considerare se continuare invece di bloccare lo script
+                            }
+
+                            // Log locale
                             $query = $this->DBLocal->prepare("INSERT INTO files_upload (nome_flusso, codice_ente, sede_id) VALUES (?,?,?)");
                             $query->bind_param('sss',$fileToUpload['nome_flusso'], $utility['codice_ente'], $utility['sede_id']);
 
@@ -172,11 +180,11 @@ class FlowsMain{
                                 throw new Exception('Unable to save data into local database');
                             }
                             $this->log->info('File '.$fileToUpload['nome_flusso']. ' uploaded into '.$remoteFolder);
+                            $nUpload++;
                         }
                     }
 
-
-
+                    $this->log->info('End script, '.$nUpload.' files uploaded');
                     break;
 
             }
