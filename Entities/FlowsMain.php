@@ -170,7 +170,8 @@ class FlowsMain{
                                             FROM flussi_file 
                                                 WHERE codice_ente = '".$utility['codice_ente']."'
                                                 AND sede_id = '".$utility['sede_id']."'                                                          
-                                                AND flag_esportato_cartella_out = 1");
+                                                AND flag_esportato_cartella_out = 1
+                                                AND flag_trasferimento_cartella_out = 0"); // Prendo quelli non ancora inviati
 
                         $filesToUpload = [];
                         while($data = $query->fetch_assoc()){
