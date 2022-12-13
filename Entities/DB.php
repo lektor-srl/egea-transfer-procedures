@@ -71,6 +71,13 @@ class DB extends mysqli {
 
     }
 
+    /**
+     * > This function inserts a log entry into the database
+     *
+     * @param string job The name of the job that is running.
+     * @param string level This is the level of the log. It can be one of the following: info, error
+     * @param string message The message to be logged.
+     */
     public function insertLog($job, $level, $message):void
     {
         try {
@@ -84,6 +91,27 @@ class DB extends mysqli {
             throw $e;
         }
 
+    }
+
+    /**
+     * It gets the names of the files from the database
+     *
+     * @param array utility array
+     * @return array An array of files from the database.
+     */
+    public function getIndexFilesFromDB(array $utility):array
+    {
+        $filesDB = [];
+        $query = $this->query
+        ("SELECT nome_flusso FROM flussi_file 
+                WHERE codice_ente = '".$utility['codice_ente']."' 
+                AND sede_id = '".$utility['sede_id']."'");
+
+        while($data = $query->fetch_assoc()){
+            $filesDB[] = $data['nome_flusso'];
+        }
+
+        return $filesDB;
     }
 
 }

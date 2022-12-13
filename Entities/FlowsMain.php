@@ -46,57 +46,59 @@ class FlowsMain{
                 case 'download':
                     $nDownload = 0;
                     foreach (Config::$utilities as $utility){
-                        // Get the folder from Ftp
-
                         $this->log->info('Downloading files from "'. $utility['name'].'"');
 
 
-                        // 1- Scan della cartella FTP per prendere i nomi dei files
-                        $folder = $utility['ftpFolder'] . '/LET/DW';
-
+                        // Scan ftp Folder for index files
                         $filesFtp = [];
-                        foreach ($this->ftp->scanDir($folder) as $key => $fileData){
-                            //if(str_contains($fileData['name'], 'LEKTOR')){  //todo::serve per testare - da togliere in prod
-                                $filesFtp[] = $fileData['name'];
-                            //}
+                        $filesFtp = $this->ftp->getIndexFilesFromFtp($utility);
 
-                        }
-
-                        //2- Controllo sul DB di Google se esistono i files
-                        $query = $this->DBGoogle->query
-                        ("SELECT nome_flusso FROM flussi_file 
-                                WHERE codice_ente = '".$utility['codice_ente']."' 
-                                AND sede_id = '".$utility['sede_id']."'");
-
+                        // Check on GCloud DB which files are already worked. If a file is present, it will not handle again
                         $filesDB = [];
-                        while($data = $query->fetch_assoc()){
-                            $filesDB[] = $data['nome_flusso'];
-                        }
+                        $filesDB = $this->DBGoogle->getIndexFilesFromDB($utility);
 
 
-                        //3- Scarico solo i files che non ci sono ancora
+                        // Download only file aren't handled already
                         $filesToDownload = array_diff($filesFtp, $filesDB);
 
                         foreach ($filesToDownload as $fileNameToDownload){
 
+                            $folder = $utility['ftpFolder'] . '/LET/DW';
                             $filePathToDownload = $folder . '/' . $fileNameToDownload;
+                            //$originalFileSize = filesize($filePathToDownload);
+                            $tempFile = Config::$runtimePath. '/' . $fileNameToDownload;
 
-                            if(!$this->ftp->get(Config::$runtimePath. '/' . $fileNameToDownload, $filePathToDownload, 1)){
-                                throw new Exception('Unable to download the file '. $fileNameToDownload);
+                            // Download the single file
+                            if(!$this->ftp->get($tempFile, $filePathToDownload, 1)){
+                                $this->log->customError('Unable to download the file '. $fileNameToDownload, ['logMail' => false]);
+                                continue;   //continue the application for not block the program
                             }
 
-                            //4- Sposto il file nell'ambiente shared
-                            //todo:: con il rename sposta il file. Considerare se copiare o lasciare cosi
-                            if(!rename(
-                                Config::$runtimePath.'/'. $fileNameToDownload,
-                                Config::$winShare . '/IN/' . $utility['sharedFolder'] .'/' . $fileNameToDownload)){
-                                throw new Exception('Unable to copy the file ' . $fileNameToDownload);
-                                //todo:: causa interruzione del programma. Considerare se continuare con il prossimo file
+                            // Check if the file is valid
+                            if(!is_file($tempFile)){
+                                $this->log->customError('File not correct '. $fileNameToDownload, ['logMail' => false]);
+                                continue;   //continue the application for not block the program
+                            }
+
+                            // Convert the file into DOS format for be able to be readble to
+                            if(!Utility::unixToDos($tempFile)){
+                                $this->log->customError('Unable to convert into dos format the file '. $fileNameToDownload, ['logMail' => false]);
+                                continue;   //continue the application for not block the program
+                            }
+
+                            // Controllo la dimensione del file todo:: da verificare questo passaggio
+//                            if(filesize($tempFile) != $originalFileSize){
+//                                throw new Exception('File size is different '. $fileNameToDownload);
+//                            }
+
+                            if(!rename($tempFile,Config::$winShare . '/IN/' . $utility['sharedFolder'] .'/' . $fileNameToDownload)){
+                                $this->log->customError('Unable to copy the file ' . $fileNameToDownload, ['logMail' => false]);
+                                continue;   //continue the application for not block the program
                             }
 
                             //5- Scrittura a DB google nuovo record
                             $now = new DateTime();
-                            $data = $now->format('Y-m-d');
+                            $data = $now->format('d/m/Y');
                             $ora = $now->format('H:i:s');
 
                             $query = $this->DBGoogle->prepare(
@@ -197,15 +199,20 @@ class FlowsMain{
 
     }
 
+    /**
+     * It ends the program.
+     */
     private function endProgram():void
     {
         $this->log->info('End flows script. ');
         $this->log->info("\n\n", ['logDB' => false, 'logFile' => false]);
     }
 
+
     /**
-     * @return string|null Attachment mode selected
+     * It gets the command line arguments, checks if the mode is valid and returns it
      * @throws Exception
+     * @return string|null The mode selected by the user.
      */
     private function detectMode():string|null
     {
@@ -219,18 +226,5 @@ class FlowsMain{
         }
 
         return $args['mode'];
-    }
-
-
-    private function createFolder(string $folder):void
-    {
-        try {
-            if(!is_dir($folder)){
-                mkdir($folder, 0777, true);
-                $this->log->info('Created folder "'.$folder.'"');
-            }
-        }catch (Exception $e){
-            throw $e;
-        }
     }
 }

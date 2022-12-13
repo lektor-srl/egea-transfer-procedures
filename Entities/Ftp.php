@@ -76,6 +76,21 @@ class Ftp extends FtpClient{
         return parent::scanDir($directory, $recursive);
     }
 
+    public function getIndexFilesFromFtp(array $utility):array
+    {
+        $filesFtp = [];
+        $folder = $utility['ftpFolder'] . '/LET/DW';
+
+        foreach ($this->scanDir($folder) as $key => $fileData){
+            //if(str_contains($fileData['name'], 'LEKTOR')){  //todo::serve per testare - da togliere in prod
+            $filesFtp[] = $fileData['name'];
+            //}
+        }
+        return $filesFtp;
+    }
+
+
+
     /** Provide to create a folder recursively
      * @param string $folder Folder or pathFolder to create
      * @throws Exception
