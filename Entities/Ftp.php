@@ -44,7 +44,14 @@ class Ftp extends FtpClient{
     public function uploadFolder(string $targetDirectory, string $sourceSubPath):void
     {
         try {
-            $this->putAll(Config::$pathAttachments . $sourceSubPath, $targetDirectory);
+            //todo:: considerare se caricare i files in modo ricorsivo per intercettarne ogni nome
+            //$this->putAll(Config::$pathAttachments . $sourceSubPath, $targetDirectory);
+            $files = array_diff(scanDir(Config::$pathAttachments . $sourceSubPath), ['.', '..']);
+
+            foreach ($files as $file){
+                //echo $file;
+            }
+
         }catch (Exception $e){
             throw $e;
         }
