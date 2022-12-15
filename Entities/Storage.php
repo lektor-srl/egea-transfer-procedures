@@ -150,7 +150,7 @@ class Storage extends StorageClient{
             foreach ($files as $file){
                 if(is_file($file)){
                     unlink($file);
-                    $this->log->info('Removed from local the file '.$file, ['logDB' => false]);
+                    $this->log->info('Removed file from local '.$file, ['logDB' => false]);
                 }
             }
         }catch (Exception $e){

@@ -67,26 +67,6 @@ class Ftp extends FtpClient{
     }
 
 
-    /**
-     * It creates a folder in the target directory, then it gets all the files from the source sub path and puts them in
-     * the target directory
-     * @param string sourceSubPath The path to the folder you want to download.
-     * @param string targetDirectory The directory where the files will be downloaded.
-     * @return array An array of all the files in the target directory.
-     */
-    public function getFolder(string $sourceSubPath, string $targetDirectory):array
-    {
-        try {
-            $this->createFolder(Config::$pathFiles.'/'.$targetDirectory);
-            $this->getAll($sourceSubPath, Config::$pathFiles.'/'.$targetDirectory);
-
-            return array_diff(scandir(Config::$pathFiles.'/'.$targetDirectory), array('..', '.'));
-        }catch (Exception $e){
-            throw $e;
-        }
-
-    }
-
     public function scanDir($directory = '.', $recursive = false)
     {
         return parent::scanDir($directory, $recursive);

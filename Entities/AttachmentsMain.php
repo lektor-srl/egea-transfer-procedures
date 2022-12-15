@@ -1,6 +1,7 @@
 <?php
 namespace Entities;
 use Exception;
+use JetBrains\PhpStorm\Pure;
 
 /**
  * Class AttachmentsMain
@@ -26,6 +27,8 @@ class AttachmentsMain{
 
         try {
             // Check the healthy status
+            (Utility::checkFreeDiskSpace()) ?: throw new Exception('Not enough disk space available, script interrupted');
+
             $this->mode = $this->detectMode();
 
             $this->log = Log::getInstance();
@@ -42,8 +45,9 @@ class AttachmentsMain{
 
     }
 
+
     /**
-     * @throws Exception
+     * It downloads or uploads attachments from/to the FTP server
      */
     private function exec(){
         try {
@@ -131,4 +135,5 @@ class AttachmentsMain{
 
         return $args['mode'];
     }
+
 }
