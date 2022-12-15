@@ -4,7 +4,6 @@ Per far funzionare queste procedure è indispensabile avere una copia della cart
 Si raccomanda la visione dell'allegato tecnico per informazioni approfondite.
 
 ## Tecnologia
-- Applicativo v1.3.2
 - Php v8.1
 - Mysql server v8.0.31
 - Php nativo, nessun framework utilizzato
