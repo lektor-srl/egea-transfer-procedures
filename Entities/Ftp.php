@@ -36,22 +36,30 @@ class Ftp extends FtpClient{
         return self::$_instance;
     }
 
-    /** Provide to upload an entire folder through Ftp
-     * @param string $targetDirectory The folder where put the data into
-     * @param string $sourceSubPath   The folder where get the data
-     * @throws Exception
+
+
+    /**
+     * It uploads a folder to the server
+     *
+     * @param string $targetDirectory The directory on the server where the files will be uploaded.
+     * @param string $sourceSubPath The path to the folder you want to upload.
+     *
+     * @return array An array of files that have been uploaded.
      */
-    public function uploadFolder(string $targetDirectory, string $sourceSubPath):void
+    public function uploadFolder(string $targetDirectory, string $sourceSubPath):array
     {
+        $data = [];
         try {
-            //todo:: considerare se caricare i files in modo ricorsivo per intercettarne ogni nome
             //$this->putAll(Config::$pathAttachments . $sourceSubPath, $targetDirectory);
-            $files = array_diff(scanDir(Config::$pathAttachments . $sourceSubPath), ['.', '..']);
+            $files = array_diff(scanDir(Config::$pathAttachments.$sourceSubPath), ['.', '..']);
 
             foreach ($files as $file){
-                //echo $file;
+                if($this->put($targetDirectory.$file, Config::$pathAttachments.$sourceSubPath.$file, 1)){
+                    $data[] = Config::$pathAttachments.$sourceSubPath.$file;
+                }
             }
 
+            return $data;
         }catch (Exception $e){
             throw $e;
         }

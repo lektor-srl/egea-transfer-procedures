@@ -13,6 +13,7 @@ class AttachmentsMain{
     private DB $DB;
     private ?string $mode;
     private array $attachmentsDownloaded = [];
+    private array $attachmentsUploaded = [];
 
     /**
      * AttachmentsMain constructor.
@@ -57,7 +58,9 @@ class AttachmentsMain{
                             // Fatto in questo modo per avere un array complessivo delle foto di tutte le utility
                             $this->attachmentsDownloaded[] = $datum;
                         }
+                        $this->log->info(count($data).' attachments downloaded for utility '.$utility['name']);
                     }
+
                     $this->log->info(count($this->attachmentsDownloaded).' attachments downloaded.');
 
                     break;
@@ -66,11 +69,16 @@ class AttachmentsMain{
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Uploading attachments to "'. $utility['ftpFolder'].'"');
 
-                        //todo:: considerare se caricare i files in modo ricorsivo per intercettarne ogni nome
-                        $this->ftp->uploadFolder('/'.$utility['ftpFolder'].'/IMG/UP/testLektor/', $utility['name'].'/');
+                        $data = $this->ftp->uploadFolder('/'.$utility['ftpFolder'].'/IMG/UP/testLektor/', $utility['name'].'/');
 
-                        $this->log->info('Utility "'.$utility['name'].'" uploaded to '.$utility['ftpFolder']);
+                        foreach ($data as $datum){
+                            // Fatto in questo modo per avere un array complessivo delle foto caricate correttamente di tutte le utility
+                            $this->attachmentsUploaded[] = $datum;
+                        }
+                        $this->log->info(count($data).' attachments uploaded for utility '.$utility['name']);
                     }
+
+                    $this->log->info(count($this->attachmentsUploaded).' attachments uploaded.');
 
                     break;
 
@@ -95,7 +103,8 @@ class AttachmentsMain{
     private function endProgram():void
     {
         try {
-            $this->storage->removeLocalFiles($this->attachmentsDownloaded);
+            // Remove only the file are correctly uploaded
+            $this->storage->removeLocalFiles($this->attachmentsUploaded);
 
             $this->log->info('End '.$this->mode.' attachments script. ');
             $this->log->info("\n\n", ['logDB' => false, 'logFile' => false]);
