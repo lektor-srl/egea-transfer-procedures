@@ -19,8 +19,11 @@ class Log{
             $fileName = $date->format(Config::$logFileNameFormat).'.log';
 
             if(!is_dir(Config::$logPath)) {
-                mkdir(Config::$logPath, 777, true);
+                mkdir(Config::$logPath, 0777, true);
             }
+
+            touch(Config::$logPath.$fileName);
+            chmod(Config::$logPath.$fileName, 0777);
 
             $this->_file = fopen(Config::$logPath.$fileName, 'a+', );
             $this->_DB = DB::getInstance('local');
@@ -47,11 +50,11 @@ class Log{
         return self::$_instance;
     }
 
-
-    /** Provide to write a log based on the configuration. If provided, it allow to change the logic with the logPropsOverride
-     * @param string $message The message to log
-     * @param array $logPropsOverride logDB, logFile, LogConsole - The properties to override if needed
-     * @throws Exception
+    /**
+     * It logs a message to the console, to a file and to a database
+     *
+     * @param string $message the message to log
+     * @param array $logPropsOverride an array of properties to override the default ones.
      */
     public function info(string $message, array $logPropsOverride = []):void
     {
@@ -86,15 +89,27 @@ class Log{
 
     }
 
-    public function customError(string $message):void
+    /**
+     * This function is used to log a custom error message
+     *
+     * @param string message The message to be logged.
+     * @param array logPropsOverride This is an array of key/value pairs that will override the default log properties.
+     */
+    public function customError(string $message, array $logPropsOverride = []):void
     {
-        $dateTime = new DateTime();
-        $logText = $dateTime->format('Y-m-d H:i:s')." - Error: ".$message;
-
-        fwrite($this->_file, $logText);
+        $e = new Exception($message);
+        $this->exceptionError($e, $logPropsOverride);
     }
 
-    public function exceptionError(Exception $e):void
+
+    /**
+     * It logs the error message to the console, file, database, and/or email
+     *
+     * @param Exception $e
+     * @param array $logPropsOverride This is an array of key/value pairs that will override the default logProps array.
+     * @throws Exception
+     */
+    public function exceptionError(Exception $e, array $logPropsOverride = []):void
     {
         try {
             $logProps = Config::$logProps;

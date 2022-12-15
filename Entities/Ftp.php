@@ -58,11 +58,13 @@ class Ftp extends FtpClient{
 
     }
 
-    /** Provide to download an entire folder from Ftp. Return the files list downloaded
-     * @param string $sourceSubPath
-     * @param string $targetDirectory
-     * @return array The files list dowloaded
-     * @throws \FtpClient\FtpException
+
+    /**
+     * It creates a folder in the target directory, then it gets all the files from the source sub path and puts them in
+     * the target directory
+     * @param string sourceSubPath The path to the folder you want to download.
+     * @param string targetDirectory The directory where the files will be downloaded.
+     * @return array An array of all the files in the target directory.
      */
     public function getFolder(string $sourceSubPath, string $targetDirectory):array
     {
@@ -82,6 +84,29 @@ class Ftp extends FtpClient{
         return parent::scanDir($directory, $recursive);
     }
 
+
+    /**
+     * It scans a folder on an FTP server and returns an array of file names
+     *
+     * @param array utility the utility name
+     *
+     * @return array An array of files from the FTP server.
+     */
+    public function getIndexFilesFromFtp(array $utility):array
+    {
+        $filesFtp = [];
+        $folder = $utility['ftpFolder'] . '/LET/DW';
+
+        foreach ($this->scanDir($folder) as $key => $fileData){
+            //if(str_contains($fileData['name'], 'LEKTOR')){  //todo::serve per testare - da togliere in prod
+            $filesFtp[] = $fileData['name'];
+            //}
+        }
+        return $filesFtp;
+    }
+
+
+
     /** Provide to create a folder recursively
      * @param string $folder Folder or pathFolder to create
      * @throws Exception
@@ -90,7 +115,7 @@ class Ftp extends FtpClient{
     {
         try {
             if(!is_dir($folder)){
-                mkdir($folder, 777, true);
+                mkdir($folder, 0777, true);
                 $this->log->info('Created folder "'.$folder.'"');
             }
         }catch (Exception $e){

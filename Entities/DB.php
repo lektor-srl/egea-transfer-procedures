@@ -7,6 +7,7 @@ use mysqli;
 class DB extends mysqli {
 
     private static ?DB $_localInstance = null;
+    private static ?DB $_googleInstance = null;
 
 
     public function __construct(string $type = 'local')
@@ -42,34 +43,43 @@ class DB extends mysqli {
         $this->close();
     }
 
+
     /**
-     * @return DB Return a new or last DB object instance created
-     * @throws Exception
+     * It creates a new instance of the DB class if one does not already exist.
+     * @param string $type The type of database you want to connect to.
+     * @return DB The instance of the DB class.
      */
     public static function getInstance(string $type = 'local'):DB
     {
         try {
             switch ($type){
                 case 'google':
-                    if (self::$_localInstance == null) {
-                        self::$_localInstance = new DB('google');
+                    if (self::$_googleInstance == null) {
+                        self::$_googleInstance = new DB('google');
                     }
-                    break;
+                    return self::$_googleInstance;
 
                 default:
                     if (self::$_localInstance == null) {
                         self::$_localInstance = new DB('local');
                     }
-                break;
+                    return self::$_localInstance;
             }
 
-            return self::$_localInstance;
+
         }catch (Exception $e){
             throw $e;
         }
 
     }
 
+    /**
+     * > This function inserts a log entry into the database
+     *
+     * @param string job The name of the job that is running.
+     * @param string level This is the level of the log. It can be one of the following: info, error
+     * @param string message The message to be logged.
+     */
     public function insertLog($job, $level, $message):void
     {
         try {
@@ -83,6 +93,27 @@ class DB extends mysqli {
             throw $e;
         }
 
+    }
+
+    /**
+     * It gets the names of the files from the database
+     *
+     * @param array utility array
+     * @return array An array of files from the database.
+     */
+    public function getIndexFilesFromDB(array $utility):array
+    {
+        $filesDB = [];
+        $query = $this->query
+        ("SELECT nome_flusso FROM flussi_file 
+                WHERE codice_ente = '".$utility['codice_ente']."' 
+                AND sede_id = '".$utility['sede_id']."'");
+
+        while($data = $query->fetch_assoc()){
+            $filesDB[] = $data['nome_flusso'];
+        }
+
+        return $filesDB;
     }
 
 }

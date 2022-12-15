@@ -8,6 +8,7 @@
     "autoload": {
         "files": [
             "Protected/Environment.php",
+            "Entities/Utility.php",
             "Entities/AttachmentsMain.php",
             "Entities/FlowsMain.php",
             "Entities/Config.php",
