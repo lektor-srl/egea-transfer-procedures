@@ -43,9 +43,11 @@ class DB extends mysqli {
         $this->close();
     }
 
+
     /**
-     * @return DB Return a new or last DB object instance created
-     * @throws Exception
+     * It creates a new instance of the DB class if one does not already exist.
+     * @param string $type The type of database you want to connect to.
+     * @return DB The instance of the DB class.
      */
     public static function getInstance(string $type = 'local'):DB
     {
