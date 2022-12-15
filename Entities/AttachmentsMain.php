@@ -12,7 +12,7 @@ class AttachmentsMain{
     private Log $log;
     private DB $DB;
     private ?string $mode;
-    private int $nDownload = 0;
+    private array $attachmentsDownloaded = [];
 
     /**
      * AttachmentsMain constructor.
@@ -52,9 +52,13 @@ class AttachmentsMain{
                 case 'download':
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Downloading attachments from "'. $utility['name'].'"');
-                        $this->nDownload += $this->storage->downloadRecursiveAttachments('foto/'.$utility['name'].'/lav_', $utility['name'].'/');
+                        $data = $this->storage->downloadRecursiveAttachments('foto/'.$utility['name'].'/lav_', $utility['name'].'/');
+                        foreach ($data as $datum){
+                            // Fatto in questo modo per avere un array complessivo delle foto di tutte le utility
+                            $this->attachmentsDownloaded[] = $datum;
+                        }
                     }
-                    $this->log->info($this->nDownload.' attachments downloaded.');
+                    $this->log->info(count($this->attachmentsDownloaded).' attachments downloaded.');
 
                     break;
 
@@ -62,6 +66,7 @@ class AttachmentsMain{
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Uploading attachments to "'. $utility['ftpFolder'].'"');
 
+                        //todo:: considerare se caricare i files in modo ricorsivo per intercettarne ogni nome
                         $this->ftp->uploadFolder('/'.$utility['ftpFolder'].'/IMG/UP/testLektor/', $utility['name'].'/');
 
                         $this->log->info('Utility "'.$utility['name'].'" uploaded to '.$utility['ftpFolder']);
@@ -83,16 +88,26 @@ class AttachmentsMain{
 
     }
 
+    /**
+     * It provide the endProgram methods
+     * @throws Exception
+     */
     private function endProgram():void
     {
-        $this->log->info('End '.$this->mode.' attachments script. ');
-        $this->log->info("\n\n", ['logDB' => false, 'logFile' => false]);
-        // todo:: prevedere la cancellazione della cartella temporanea
+        try {
+            $this->storage->removeLocalFiles($this->attachmentsDownloaded);
+
+            $this->log->info('End '.$this->mode.' attachments script. ');
+            $this->log->info("\n\n", ['logDB' => false, 'logFile' => false]);
+        }catch (Exception $e){
+            throw $e;
+        }
     }
 
     /**
-     * @return string|null Attachment mode selected
-     * @throws Exception
+     * It gets the command line arguments, checks if the mode is valid and returns it
+     * @return string|null The mode selected by the user.
+     * * @throws Exception
      */
     private function detectMode():string|null
     {

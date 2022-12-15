@@ -12,6 +12,7 @@ class Storage extends StorageClient{
     private DateTime $today;
     private Bucket $bucket;
     private Log $log;
+    private array $attachmentsDownloaded;
 
     public function __construct()
     {
@@ -41,13 +42,13 @@ class Storage extends StorageClient{
      * @param string $prefix        The GCloud bucket subfolder where the program get the attachments from
      * @param string|null $subPath  The subfolder where the program save the attachments to
      * @param int|null $limit       If set, provide a limit on Gcloud searching
-     * @return int                  The total attachments downloaded
+     * @return array                An array containing the filePath+fileName of files downloaded
      * @throws Exception
      */
-    public function downloadRecursiveAttachments(string $prefix, string $subPath = null, int $limit = null):int
+    public function downloadRecursiveAttachments(string $prefix, string $subPath = null, int $limit = null):array
     {
         try {
-            $counter = 0;
+            $this->attachmentsDownloaded = [];
             // Check and create if not exist the temp folder
             $this->createFolder(Config::$pathAttachments.$subPath);
 
@@ -61,7 +62,7 @@ class Storage extends StorageClient{
 
             foreach ($objects as $object) {
 
-                if($i >= Config::$maxDownload){return $counter;} //todo::debug - da togliere
+                if($i >= Config::$maxDownload){return $this->attachmentsDownloaded;} //todo::debug - da togliere
 
                 if(!$this->checkObject($object)){
                     continue;
@@ -73,11 +74,11 @@ class Storage extends StorageClient{
 
                 $this->log->info('Downloaded '.$fileName, ['logDB' => false]);
 
-                $counter++;
+                $this->attachmentsDownloaded[] = Config::$pathAttachments . $subPath . $fileName;
                 $i++;
             }
 
-            return $counter;
+            return $this->attachmentsDownloaded;
         }catch (Exception $e){
             throw $e;
         }
@@ -125,6 +126,7 @@ class Storage extends StorageClient{
         try {
             $lastUpdated = new DateTime($object->info()['updated']);
 
+            // Controls to check the file
             if( false
                 || $object->info()['contentType'] != 'image/jpeg'
                 // || $lastUpdated->format(Config::$dateFormatCheck) != $this->today->format(Config::$dateFormatCheck)  //todo:: da attivare in prod
@@ -133,6 +135,25 @@ class Storage extends StorageClient{
             return true;
 
         } catch (Exception $e) {
+            throw $e;
+        }
+    }
+
+    /**
+     * It removes files from the local server
+     * @param array $files array of files to be removed
+     * @throws Exception
+     */
+    public function removeLocalFiles(array $files):void
+    {
+        try {
+            foreach ($files as $file){
+                if(is_file($file)){
+                    unlink($file);
+                    $this->log->info('Removed from local the file '.$file, ['logDB' => false]);
+                }
+            }
+        }catch (Exception $e){
             throw $e;
         }
 
