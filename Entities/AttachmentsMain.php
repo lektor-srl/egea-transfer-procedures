@@ -27,7 +27,7 @@ class AttachmentsMain{
 
         try {
             // Check the healthy status
-            (Utility::checkFreeDiskSpace()) ?: throw new Exception('Not enough disk space available, script interrupted');
+            (Utility::checkFreeDiskSpace()) ?: throw new Exception("Not enough disk space available, script interrupted\n");
 
             $this->mode = $this->detectMode();
 
@@ -38,6 +38,8 @@ class AttachmentsMain{
 
             // If no errors detected, launch the application
             $this->exec();
+
+            //sdfsf
 
         }catch (Exception $e){
             Log::getInstance()->exceptionError($e);
