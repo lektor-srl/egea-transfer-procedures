@@ -12,7 +12,7 @@ class AttachmentsMain{
     private Log $log;
     private DB $DB;
     private ?string $mode;
-    private int $nDownload = 0;
+    private array $attachmentsDownloaded = [];
 
     /**
      * AttachmentsMain constructor.
@@ -52,9 +52,9 @@ class AttachmentsMain{
                 case 'download':
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Downloading attachments from "'. $utility['name'].'"');
-                        $this->nDownload += $this->storage->downloadRecursiveAttachments('foto/'.$utility['name'].'/lav_', $utility['name'].'/');
+                        $this->attachmentsDownloaded[$utility['name']] = $this->storage->downloadRecursiveAttachments('foto/'.$utility['name'].'/lav_', $utility['name'].'/');
                     }
-                    $this->log->info($this->nDownload.' attachments downloaded.');
+                    $this->log->info(count($this->attachmentsDownloaded).' attachments downloaded.');
 
                     break;
 
@@ -87,7 +87,8 @@ class AttachmentsMain{
     {
         $this->log->info('End '.$this->mode.' attachments script. ');
         $this->log->info("\n\n", ['logDB' => false, 'logFile' => false]);
-        // todo:: prevedere la cancellazione della cartella temporanea
+
+       var_dump($this->attachmentsDownloaded);
     }
 
     /**

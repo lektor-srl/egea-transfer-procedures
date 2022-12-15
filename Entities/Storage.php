@@ -12,6 +12,7 @@ class Storage extends StorageClient{
     private DateTime $today;
     private Bucket $bucket;
     private Log $log;
+    private array $attachmentsDownloaded;
 
     public function __construct()
     {
@@ -41,13 +42,13 @@ class Storage extends StorageClient{
      * @param string $prefix        The GCloud bucket subfolder where the program get the attachments from
      * @param string|null $subPath  The subfolder where the program save the attachments to
      * @param int|null $limit       If set, provide a limit on Gcloud searching
-     * @return int                  The total attachments downloaded
+     * @return array                An array containing the filename of files downloaded
      * @throws Exception
      */
-    public function downloadRecursiveAttachments(string $prefix, string $subPath = null, int $limit = null):int
+    public function downloadRecursiveAttachments(string $prefix, string $subPath = null, int $limit = null):array
     {
         try {
-            $counter = 0;
+            $this->attachmentsDownloaded = [];
             // Check and create if not exist the temp folder
             $this->createFolder(Config::$pathAttachments.$subPath);
 
@@ -61,7 +62,7 @@ class Storage extends StorageClient{
 
             foreach ($objects as $object) {
 
-                if($i >= Config::$maxDownload){return $counter;} //todo::debug - da togliere
+                if($i >= Config::$maxDownload){return $this->attachmentsDownloaded;} //todo::debug - da togliere
 
                 if(!$this->checkObject($object)){
                     continue;
@@ -73,7 +74,7 @@ class Storage extends StorageClient{
 
                 $this->log->info('Downloaded '.$fileName, ['logDB' => false]);
 
-                $counter++;
+                $this->attachmentsDownloaded[] = $fileName;
                 $i++;
             }
 
