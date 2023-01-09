@@ -58,11 +58,8 @@ class Storage extends StorageClient{
                 'prefix' => $prefix
             ]);
 
-            $i = 0; //todo::debug - da togliere
 
             foreach ($objects as $object) {
-
-                if($i >= Config::$maxDownload){return $this->attachmentsDownloaded;} //todo::debug - da togliere
 
                 if(!$this->checkObject($object)){
                     continue;
@@ -129,7 +126,7 @@ class Storage extends StorageClient{
             // Controls to check the file
             if( false
                 || $object->info()['contentType'] != 'image/jpeg'
-                // || $lastUpdated->format(Config::$dateFormatCheck) != $this->today->format(Config::$dateFormatCheck)  //todo:: da attivare in prod
+                || $lastUpdated->format(Config::$dateFormatCheck) != $this->today->format(Config::$dateFormatCheck)
             ){ return false; }
 
             return true;

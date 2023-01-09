@@ -85,7 +85,7 @@ class FlowsMain{
                                 continue;   //continue the application for not block the program
                             }
 
-                            // Check the filesize to check if the file isn't corrupt todo:: da verificare questo passaggio
+                            // Check the filesize to check if the file isn't corrupt todo:: da ricontrollare questo passaggio. Sembra non funzionare
 //                            $originalFileSize = filesize($filePathToDownload);
 //                            if(filesize($tempFile) != $originalFileSize){
 //                                throw new Exception('File size is different '. $fileNameToDownload);

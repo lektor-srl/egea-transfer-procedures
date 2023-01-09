@@ -39,8 +39,6 @@ class AttachmentsMain{
             // If no errors detected, launch the application
             $this->exec();
 
-            //sdfsf
-
         }catch (Exception $e){
             Log::getInstance()->exceptionError($e);
         }

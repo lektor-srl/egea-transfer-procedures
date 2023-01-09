@@ -86,9 +86,7 @@ class Ftp extends FtpClient{
         $folder = $utility['ftpFolder'] . '/LET/DW';
 
         foreach ($this->scanDir($folder) as $key => $fileData){
-            //if(str_contains($fileData['name'], 'LEKTOR')){  //todo::serve per testare - da togliere in prod
             $filesFtp[] = $fileData['name'];
-            //}
         }
         return $filesFtp;
     }
