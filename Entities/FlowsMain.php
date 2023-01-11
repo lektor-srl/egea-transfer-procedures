@@ -125,7 +125,7 @@ class FlowsMain{
                                         VALUES (?,?,?,?,?,?,?,?)");
 
                             $query->bind_param('sssssiss',
-                                $p['fileNameToDownload'],
+                                $p['nome_flusso'],
                                 $p['data_rilevamento'],
                                 $p['ora_rilevamento'],
                                 $p['data_trasferimento_cartella_in'],
@@ -143,7 +143,7 @@ class FlowsMain{
                             // Insert record into local Database
                             $query = $this->DBLocal->prepare("INSERT INTO files_download (nome_flusso, codice_ente, sede_id) VALUES (?,?,?)");
                             $query->bind_param('sss',
-                                $p['fileNameToDownload'],
+                                $p['nome_flusso'],
                                 $p['codice_ente'],
                                 $p['sede_id']
                             );
