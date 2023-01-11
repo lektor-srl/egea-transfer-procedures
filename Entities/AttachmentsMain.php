@@ -73,7 +73,7 @@ class AttachmentsMain{
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Uploading attachments to "'. $utility['ftpFolder'].'"');
 
-                        $data = $this->ftp->uploadFolder('/'.$utility['ftpFolder'].'/IMG/UP/testLektor/', $utility['name'].'/');
+                        $data = $this->ftp->uploadFolder('/'.$utility['ftpFolder'].'/IMG/UP/', $utility['name'].'/');
 
                         foreach ($data as $datum){
                             // Fatto in questo modo per avere un array complessivo delle foto caricate correttamente di tutte le utility

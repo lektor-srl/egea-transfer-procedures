@@ -48,7 +48,6 @@ class FlowsMain{
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Downloading files from "'. $utility['name'].'"');
 
-
                         // Scan ftp Folder for index files
                         $filesFtp = [];
                         $filesFtp = $this->ftp->getIndexFilesFromFtp($utility);
@@ -68,6 +67,7 @@ class FlowsMain{
                             $tempFile = Config::$runtimePath. '/' . $fileNameToDownload;
 
                             // Download the single file
+                            $this->log->info("Downloading file $filePathToDownload" , ['logMail' => false]);
                             if(!$this->ftp->get($tempFile, $filePathToDownload, 1)){
                                 $this->log->customError('Unable to download the file '. $fileNameToDownload, ['logMail' => false]);
                                 continue;   //continue the application for not block the program
@@ -91,6 +91,8 @@ class FlowsMain{
 //                                throw new Exception('File size is different '. $fileNameToDownload);
 //                            }
 
+                            // Move the file from tmp folder to shared folder
+                            $this->log->info("Moving file $filePathToDownload from tmp to shared folder" , ['logMail' => false]);
                             if(!rename($tempFile,Config::$winShare . '/IN/' . $utility['sharedFolder'] .'/' . $fileNameToDownload)){
                                 $this->log->customError('Unable to copy the file ' . $fileNameToDownload, ['logMail' => false]);
                                 continue;   //continue the application for not block the program
@@ -134,6 +136,8 @@ class FlowsMain{
                                 $p['codice_ente'],
                                 $p['sede_id']
                             );
+
+                            $this->log->info("Creating new record on GCloud DB" , ['logMail' => false]);
                             if(!$query->execute()){
                                 $this->log->customError('Unable to insert data to GCloud DB for file ' . $fileNameToDownload, ['logMail' => false]);
                                 continue;   //continue the application for not block the program
@@ -148,8 +152,16 @@ class FlowsMain{
                                 $p['sede_id']
                             );
 
+                            $this->log->info("Creating new record on local DB" , ['logMail' => false]);
                             if(!$query->execute()){
                                 $this->log->customError('Unable to inset data into local database for file ' . $fileNameToDownload, ['logMail' => false]);
+                                continue;   //continue the application for not block the program
+                            }
+
+                            // Delete this file from the ftp server only if no errors occured
+                            $this->log->info("Deleting file $fileNameToDownload from sftp server" , ['logMail' => false]);
+                            if(!$this->ftp->delete($filePathToDownload)){
+                                $this->log->customError('Unable to delete the file '. $fileNameToDownload, ['logMail' => false]);
                                 continue;   //continue the application for not block the program
                             }
 
