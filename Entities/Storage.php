@@ -122,10 +122,11 @@ class Storage extends StorageClient{
     {
         try {
             $lastUpdated = new DateTime($object->info()['updated']);
+            $contentType = $object->info()['contentType'] ?? $object->info()['kind'];
 
             // Controls to check the file
             if( false
-                || $object->info()['contentType'] != 'image/jpeg'
+                || $contentType!= 'image/jpeg'
                 || $lastUpdated->format(Config::$dateFormatCheck) != $this->today->format(Config::$dateFormatCheck)
             ){ return false; }
 
