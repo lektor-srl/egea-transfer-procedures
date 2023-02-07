@@ -41,11 +41,11 @@ class Storage extends StorageClient{
      /** Provide to download the attachments from GCloud recursively
      * @param string $prefix        The GCloud bucket subfolder where the program get the attachments from
      * @param string|null $subPath  The subfolder where the program save the attachments to
-     * @param int|null $limit       If set, provide a limit on Gcloud searching
+     * @param array $params       If set, provide some custom params [limit, dateFrom]
      * @return array                An array containing the filePath+fileName of files downloaded
      * @throws Exception
      */
-    public function downloadRecursiveAttachments(string $prefix, string $subPath = null, int $limit = null):array
+    public function downloadRecursiveAttachments(string $prefix, string $subPath = null, array $params = []):array
     {
         try {
             $this->attachmentsDownloaded = [];
@@ -54,14 +54,14 @@ class Storage extends StorageClient{
 
             // Get the bucket information
             $objects = $this->bucket->objects([
-                'resultLimit' => $limit,
+                'resultLimit' => $params['limit'],
                 'prefix' => $prefix
             ]);
 
 
             foreach ($objects as $object) {
 
-                if(!$this->checkObject($object)){
+                if(!$this->checkObject($object, $params)){
                     continue;
                 }
 
@@ -72,7 +72,7 @@ class Storage extends StorageClient{
                 $this->log->info('Downloaded '.$fileName, ['logDB' => false]);
 
                 $this->attachmentsDownloaded[] = Config::$pathAttachments . $subPath . $fileName;
-                $i++;
+
             }
 
             return $this->attachmentsDownloaded;
@@ -115,21 +115,33 @@ class Storage extends StorageClient{
 
     /** Check if the object is valid to download or not
      * @param Object $object The GCloud object to check
-     * @return bool 
+     * @param $params
+     * @return bool
      * @throws Exception
      */
-    private function checkObject($object):bool
+    private function checkObject(object $object, $params):bool
     {
         try {
             $lastUpdated = new DateTime($object->info()['updated']);
             $contentType = $object->info()['contentType'] ?? $object->info()['kind'];
 
-            // Controls to check the file
-            if( false
-                || $contentType!= 'image/jpeg'
-                || $lastUpdated->format(Config::$dateFormatCheck) != $this->today->format(Config::$dateFormatCheck)
-            ){ return false; }
+            if(!is_null($params['dateFrom'])){
+                echo "\ndateFrom: ".$params['dateFrom'];
+                // Controls to check the file with custom date from
+                $dateFrom = new DateTime($params['dateFrom']);
+                if (false
+                    || $contentType != 'image/jpeg'
+                    || $lastUpdated->format(Config::$dateFormatCheck) <= $dateFrom
+                ) { return false; }
 
+            }else {
+                echo "\ngiorno corrente";
+                // Controls to check if file updated date is != from today
+                if (false
+                    || $contentType != 'image/jpeg'
+                    || $lastUpdated->format(Config::$dateFormatCheck) != $this->today->format(Config::$dateFormatCheck)
+                ) { return false; }
+            }
             return true;
 
         } catch (Exception $e) {

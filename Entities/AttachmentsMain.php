@@ -1,7 +1,6 @@
 <?php
 namespace Entities;
 use Exception;
-use JetBrains\PhpStorm\Pure;
 
 /**
  * Class AttachmentsMain
@@ -18,9 +17,10 @@ class AttachmentsMain{
 
     /**
      * AttachmentsMain constructor.
+     * @param array $params
      * @throws Exception
      */
-    public function __construct()
+    public function __construct(array $params = [])
     {
         ini_set('display_errors', 1);
         error_reporting(E_ALL);
@@ -37,7 +37,7 @@ class AttachmentsMain{
             $this->DB = DB::getInstance();
 
             // If no errors detected, launch the application
-            $this->exec();
+            $this->exec($params);
 
         }catch (Exception $e){
             Log::getInstance()->exceptionError($e);
@@ -48,8 +48,10 @@ class AttachmentsMain{
 
     /**
      * It downloads or uploads attachments from/to the FTP server
+     * @param array $params
+     * @throws Exception
      */
-    private function exec(){
+    private function exec(array $params = []){
         try {
             $this->log->info('Start attachments script, "'.$this->mode.'" mode selected');
 
@@ -57,7 +59,7 @@ class AttachmentsMain{
                 case 'download':
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Downloading attachments from "'. $utility['name'].'"');
-                        $data = $this->storage->downloadRecursiveAttachments('foto/'.$utility['name'].'/lav_', $utility['name'].'/');
+                        $data = $this->storage->downloadRecursiveAttachments('foto/'.$utility['name'].'/lav_', $utility['name'].'/', $params);
                         foreach ($data as $datum){
                             // Fatto in questo modo per avere un array complessivo delle foto di tutte le utility
                             $this->attachmentsDownloaded[] = $datum;
