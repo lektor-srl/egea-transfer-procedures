@@ -121,7 +121,7 @@ class AttachmentsMain{
             $endTime = new DateTime();
             $this->log->info('End '.$this->mode.' attachments script. ');
             //$this->log->info('Executed in ' . $this->startTime->diff(new DateTime())->format('m') . ' minutes');
-            $this->log->info('Executed in ' . $endTime->diff($this->startTime)->format('%s') . ' seconds');
+            $this->log->info('Executed in ' . $endTime->diff($this->startTime)->format('%m:%s') . ' minutes');
             $this->log->info("\n\n", ['logDB' => false, 'logFile' => false]);
 
         }catch (Exception $e){
