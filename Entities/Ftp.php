@@ -56,6 +56,7 @@ class Ftp extends FtpClient{
             foreach ($files as $file){
                 if($this->put($targetDirectory.$file, Config::$pathAttachments.$sourceSubPath.$file, 1)){
                     $data[] = Config::$pathAttachments.$sourceSubPath.$file;
+                    $this->log->info('Uploaded ' . $sourceSubPath.$file, ['logDB' => false]);
                 }
             }
 

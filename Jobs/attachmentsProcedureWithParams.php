@@ -3,7 +3,8 @@ namespace Entities;
 require __DIR__.'/../vendor/autoload.php';
 $params = [
     'limit' => null,
-    'dateFrom' => '2022-07-01 00:00:00',
+    'dateFrom' => '2023-01-01',
+    'dateTo' => '2023-01-31',
 ];
 
 $program = new AttachmentsMain($params);

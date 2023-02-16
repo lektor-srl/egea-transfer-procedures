@@ -1,5 +1,7 @@
 <?php
 namespace Entities;
+use Cassandra\Date;
+use DateTime;
 use Exception;
 
 /**
@@ -14,6 +16,7 @@ class AttachmentsMain{
     private ?string $mode;
     private array $attachmentsDownloaded = [];
     private array $attachmentsUploaded = [];
+    private DateTime $startTime;
 
     /**
      * AttachmentsMain constructor.
@@ -24,6 +27,7 @@ class AttachmentsMain{
     {
         ini_set('display_errors', 1);
         error_reporting(E_ALL);
+        $this->startTime = new DateTime();
 
         try {
             // Check the healthy status
@@ -59,7 +63,9 @@ class AttachmentsMain{
                 case 'download':
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Downloading attachments from "'. $utility['name'].'"');
-                        $data = $this->storage->downloadRecursiveAttachments('foto/'.$utility['name'].'/lav_', $utility['name'].'/', $params);
+
+                        $data = $this->storage->downloadRecursiveAttachments($utility, $params);
+
                         foreach ($data as $datum){
                             // Fatto in questo modo per avere un array complessivo delle foto di tutte le utility
                             $this->attachmentsDownloaded[] = $datum;
@@ -86,6 +92,9 @@ class AttachmentsMain{
 
                     $this->log->info(count($this->attachmentsUploaded).' attachments uploaded.');
 
+                    // Remove only the file are correctly uploaded
+                    $this->storage->removeLocalFiles($this->attachmentsUploaded);
+
                     break;
 
                 default:
@@ -109,11 +118,12 @@ class AttachmentsMain{
     private function endProgram():void
     {
         try {
-            // Remove only the file are correctly uploaded
-            $this->storage->removeLocalFiles($this->attachmentsUploaded);
-
+            $endTime = new DateTime();
             $this->log->info('End '.$this->mode.' attachments script. ');
+            //$this->log->info('Executed in ' . $this->startTime->diff(new DateTime())->format('m') . ' minutes');
+            $this->log->info('Executed in ' . $endTime->diff($this->startTime)->format('%s') . ' seconds');
             $this->log->info("\n\n", ['logDB' => false, 'logFile' => false]);
+
         }catch (Exception $e){
             throw $e;
         }

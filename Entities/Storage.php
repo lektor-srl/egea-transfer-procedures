@@ -38,44 +38,83 @@ class Storage extends StorageClient{
         return self::$_instance;
     }
 
-     /** Provide to download the attachments from GCloud recursively
-     * @param string $prefix        The GCloud bucket subfolder where the program get the attachments from
-     * @param string|null $subPath  The subfolder where the program save the attachments to
-     * @param array $params       If set, provide some custom params [limit, dateFrom]
+    /** Provide to download the attachments from GCloud recursively
+     * @param array $utility
+     * @param array $params If set, provide some custom params [limit, dateFrom]
      * @return array                An array containing the filePath+fileName of files downloaded
      * @throws Exception
      */
-    public function downloadRecursiveAttachments(string $prefix, string $subPath = null, array $params = []):array
+    public function downloadRecursiveAttachments(array $utility, array $params = []):array
     {
+        $this->attachmentsDownloaded = [];
+        $lettureDB = [];
+
+
         try {
-            $this->attachmentsDownloaded = [];
+            /**
+                1) prendo tutte le lavorazioni secondo la data di riferimento
+                2) per ogni lavorazione, mi prendo il progressivo e cerco sul bucker filtrando per quella lavorazione => /foto/lav_n
+                3) mi prendo tutte le foto di questa lavorazione
+             */
+
+            // Inietto dei parametri per usarli nella query di ricerca lettura
+            $params['sedeDatabase'] = $utility['sedeDatabase'];
+            $params['sedeId'] = $utility['sede_id'];
+
             // Check and create if not exist the temp folder
-            $this->createFolder(Config::$pathAttachments.$subPath);
+            $this->createFolder(Config::$pathAttachments.$utility['name']);
 
-            // Get the bucket information
-            $objects = $this->bucket->objects([
-                'resultLimit' => $params['limit'],
-                'prefix' => $prefix
-            ]);
+            $lettureDB = $this->getLettureDB($params);
 
+            /** Per ogni progressivo mi recupero le foto dal bucket di google */
+            foreach ($lettureDB['progressivi'] as $progressivo){
+                $fileNames = []; // resetto i nomi dei files ad ogni nuovo progressivo
 
-            foreach ($objects as $object) {
+                // Get the bucket information
+                $objects = $this->bucket->objects([
+                    'resultLimit' => $params['limit'],
+                    'prefix' => 'foto/' . $utility['name'] . '/lav_' . $progressivo
+                ]);
 
-                if(!$this->checkObject($object, $params)){
-                    continue;
+                /** Per ogni oggetto del bucket, eseguo i controlli e scarico i metadata della foto */
+                foreach ($objects as $object) {
+                    if(!$this->checkObject($object, $params)){
+                        continue;
+                    }
+                    $fileNames[] = $this->getFilename($object->name());
                 }
 
-                $fileName = $this->getFilename($object->name());
 
-                $object->downloadToFile(Config::$pathAttachments . $subPath . $fileName);
+                /** Per ogni oggetto di cui mi sono preso i metadata, faccio il match con la matrice dei dati da DB e se corrisponde scarico la foto */
+                foreach ($fileNames as $fileName){
+                    foreach ($fileName as $key => $data){
 
-                $this->log->info('Downloaded '.$fileName, ['logDB' => false]);
+                        // prendo i dati nel rispettivo array del DB
+                        if(array_key_exists($key, $lettureDB['data'])){
+                            /** Scarico il file */
 
-                $this->attachmentsDownloaded[] = Config::$pathAttachments . $subPath . $fileName;
+                            //Riformatto la data
+                            $dmY = substr($data['data'], 6, 2) . substr($data['data'], 4, 2) . substr($data['data'], 0, 4);
+
+                            $object = $this->bucket->object($data['originalFilename']);
+
+                            //format destinazione
+                            //p.ivacliente_"codice_utente"_"matricola"_dmY_00#.jpg
+                            $newName = $utility['partita_iva'] . "_" . $lettureDB['data'][$key]['codice_utente'] . "_" . $lettureDB['data'][$key]['matricola'] . "_" . $dmY . "_00" . $data['index'] . ".jpg";
+
+                            $object->downloadToFile(Config::$pathAttachments . $utility['name'] . "/" . $newName);
+
+                            $this->log->info('Downloaded ' . $newName, ['logDB' => false]);
+                            $this->attachmentsDownloaded[] = Config::$pathAttachments . $utility['name'] . "/" . $newName;
+                        }
+
+                    }
+                }
 
             }
 
             return $this->attachmentsDownloaded;
+
         }catch (Exception $e){
             throw $e;
         }
@@ -98,19 +137,90 @@ class Storage extends StorageClient{
         }
     }
 
-    /** Provide to extract only the fileName from the GCloud object name
+    /** Provide to extract only the fileName from the GCloud object name,
+     * splitting into it's informations
      * @param string $filePath  The object name got from GCloud
-     * @return string           The filename with the extension included
+     * @return array           An array containing the splitted filename
      */
-    private function getFilename(string $filePath):string
+    private function getFilename(string $filePath):array
     {
         try {
+
+            // Il file ha il seguente formato: progressivo_sequenza_tipo_dataora.jpg
+            $record = null;
             $strings = explode('/', $filePath);
-            return end($strings);
+            $filename = explode('_', end($strings));
+
+            $progressivo = $filename[0];
+            $sequenza = $filename[1];
+
+            $record[$progressivo."_".$sequenza]['originalFilename'] = $filePath;
+            $record[$progressivo."_".$sequenza]['index'] = $filename[2];
+            $record[$progressivo."_".$sequenza]['data'] = $filename[3];
+            $record[$progressivo."_".$sequenza]['ora'] = explode('.', $filename[4])[0];
+
+            return $record;
 
         } catch (Exception $e){
             throw $e;
         }
+    }
+
+    /**
+     * It takes a date range and returns an array of arrays containing the data from the database
+     *
+     * @param array $params
+     * @return array with two keys: data and progressivi.
+     */
+    private function getLettureDB($params):array
+    {
+        $data = [];
+        $progressivi = [];
+
+        $sql = 'SELECT 	l.progressivo, 
+                            l.sequenza, 
+                            l.codice_utente, 
+                            l.matricola, 	
+                            DATE_FORMAT(CONCAT(
+                                    SUBSTRING(lv.lavorazione_data_out, 1,4), "-",
+                                    SUBSTRING(lv.lavorazione_data_out, 5,2), "-",
+                                    SUBSTRING(lv.lavorazione_data_out, 7,2)
+                                ),"%Y-%m-%d") AS lavorazione_data_out
+                 FROM '.$params["sedeDatabase"].'.letture l
+                    INNER JOIN lavorazione lv ON l.progressivo = lv.lavorazione_progressivo
+                    WHERE lv.lavorazione_sede_id = 1
+                        AND DATE_FORMAT(CONCAT(
+                                SUBSTRING(lv.lavorazione_data_out, 1,4), "-",
+                                SUBSTRING(lv.lavorazione_data_out, 5,2), "-",
+                                SUBSTRING(lv.lavorazione_data_out, 7,2)
+                            ),"%Y-%m-%d") BETWEEN "'.$params["dateFrom"].'" AND "'.$params["dateTo"].'"';
+
+        $result = DB::getInstance('google')->query($sql);
+        while($row = $result->fetch_assoc()){
+
+        /* Costruisco un array con questa struttura
+           "progressivo_sequenza" = [
+               "codice_utente" = n
+               "matricola" = n
+           ]
+        */
+            $progressivo = str_pad($row['progressivo'], 6, '0', STR_PAD_LEFT);
+            $sequenza = str_pad($row['sequenza'], 6, '0', STR_PAD_LEFT);
+
+            //Popolo l'array contenente i dati singoli
+            $data[$progressivo."_".$sequenza]['codice_utente'] = $row['codice_utente'];
+            $data[$progressivo."_".$sequenza]['matricola'] = $row['matricola'];
+
+            // Popolo l'array con solo la lista dei progressivi
+            $progressivi[] = $progressivo;
+        }
+
+        $progressivi = array_unique($progressivi);
+
+        return [
+            'data' => $data,
+            'progressivi' => $progressivi
+        ];
     }
 
     /** Check if the object is valid to download or not
@@ -122,26 +232,12 @@ class Storage extends StorageClient{
     private function checkObject(object $object, $params):bool
     {
         try {
-            $lastUpdated = new DateTime($object->info()['updated']);
             $contentType = $object->info()['contentType'] ?? $object->info()['kind'];
 
-            if(!is_null($params['dateFrom'])){
-                echo "\ndateFrom: ".$params['dateFrom'];
-                // Controls to check the file with custom date from
-                $dateFrom = new DateTime($params['dateFrom']);
-                if (false
-                    || $contentType != 'image/jpeg'
-                    || $lastUpdated->format(Config::$dateFormatCheck) <= $dateFrom
-                ) { return false; }
+            if (false
+                || $contentType != 'image/jpeg' // Controlla il formato della foto
+            ) { return false; }
 
-            }else {
-                echo "\ngiorno corrente";
-                // Controls to check if file updated date is != from today
-                if (false
-                    || $contentType != 'image/jpeg'
-                    || $lastUpdated->format(Config::$dateFormatCheck) != $this->today->format(Config::$dateFormatCheck)
-                ) { return false; }
-            }
             return true;
 
         } catch (Exception $e) {
