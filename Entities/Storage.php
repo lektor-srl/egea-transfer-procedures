@@ -59,12 +59,13 @@ class Storage extends StorageClient{
 
             // Inietto dei parametri per usarli nella query di ricerca lettura
             $params['sedeDatabase'] = $utility['sedeDatabase'];
-            $params['sedeId'] = $utility['sede_id'];
+            $params['sede_id'] = $utility['sede_id'];
 
             // Check and create if not exist the temp folder
             $this->createFolder(Config::$pathAttachments.$utility['name']);
 
             $lettureDB = $this->getLettureDB($params);
+
 
             /** Per ogni progressivo mi recupero le foto dal bucket di google */
             foreach ($lettureDB['progressivi'] as $progressivo){
@@ -188,7 +189,7 @@ class Storage extends StorageClient{
                                 ),"%Y-%m-%d") AS lavorazione_data_out
                  FROM '.$params["sedeDatabase"].'.letture l
                     INNER JOIN lavorazione lv ON l.progressivo = lv.lavorazione_progressivo
-                    WHERE lv.lavorazione_sede_id = 1
+                    WHERE lv.lavorazione_sede_id = '.$params["sede_id"].'
                         AND DATE_FORMAT(CONCAT(
                                 SUBSTRING(lv.lavorazione_data_out, 1,4), "-",
                                 SUBSTRING(lv.lavorazione_data_out, 5,2), "-",

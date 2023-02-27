@@ -53,13 +53,12 @@ class Ftp extends FtpClient{
             //$this->putAll(Config::$pathAttachments . $sourceSubPath, $targetDirectory);
             $files = array_diff(scanDir(Config::$pathAttachments.$sourceSubPath), ['.', '..']);
             foreach ($files as $file){
-                if($this->put($targetDirectory.$file, Config::$pathAttachments.$sourceSubPath.$file, 1)){
+                if($this->put($targetDirectory.$file, Config::$pathAttachments.$sourceSubPath.$file, FTP_BINARY)){
                     $data[] = Config::$pathAttachments.$sourceSubPath.$file;
                     $this->log->info('Uploaded ' . $sourceSubPath.$file, ['logDB' => false]);
                 }else{
                     $this->log->info('Error - Not uploaded ' . $sourceSubPath.$file, ['logDB' => false]);
                 }
-                $i++;
             }
 
             return $data;
