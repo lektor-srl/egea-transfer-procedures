@@ -103,7 +103,18 @@ class Storage extends StorageClient{
                             //p.ivacliente_"codice_utente"_"matricola"_dmY_00#.jpg
                             $newName = $utility['partita_iva'] . "_" . $lettureDB['data'][$key]['codice_utente'] . "_" . $lettureDB['data'][$key]['matricola'] . "_" . $dmY . "_00" . $data['index'] . ".jpg";
 
-                            $object->downloadToFile(Config::$pathAttachments . $utility['name'] . "/" . $newName);
+                            // Inserito controllo e continuo se la singola foto va in errore
+                            try{
+                                $object->downloadToFile(Config::$pathAttachments . $utility['name'] . "/" . $newName);
+                            }catch (exception $e){
+                                $dateTime = new DateTime();
+                                $logText = PHP_EOL.$dateTime->format('Y-m-d H:i:s')." - Line: ".$e->getLine().' - Warning: '.$e->getMessage();
+                                $logText.= PHP_EOL."Waiting 10 seconds for a possible connection lost...";
+                                sleep(10);
+                                Log::getInstance()->info($logText);
+                                continue;
+                            }
+
 
                             $this->log->info('Downloaded ' . $newName, ['logDB' => false]);
                             $this->attachmentsDownloaded[] = Config::$pathAttachments . $utility['name'] . "/" . $newName;
