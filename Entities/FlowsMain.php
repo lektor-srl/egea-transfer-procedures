@@ -192,14 +192,19 @@ class FlowsMain{
 
                         foreach ($filesToUpload as $fileToUpload){
                             $file = Config::$winShare.'/OUT/'.$utility['sharedFolder'].'/'.$fileToUpload['nome_flusso'];
-                            $remoteFolder = $utility['ftpFolder'].'/LET/UP/';
+                            //$remoteFolder = $utility['ftpFolder'].'/LET/UP/';
+                            $remoteFolder = $utility['ftpFolder'].'/LET/UP/TEST/'; //da attivare in fase di test
 
                             if(!is_file($file)){
                                 $this->log->customError('File '.$file.', id: '.$fileToUpload['id'].' non presente', ['logMail' => false]);
                                 continue;
                             }
-
-                            if(!$this->ftp->put($remoteFolder.$fileToUpload['nome_flusso'], $file, 1)){
+                            /**
+                            Cambio nome al file che trasferisco in neta2a perchè non gestisce più file con lo stesso nome.
+                            Viene fatto per gestire la spedizione parziale di una lavorazione
+                             */
+                            $fileNameToUpload = $remoteFolder.date('YmdHis').'_'.$fileToUpload['nome_flusso'];
+                            if(!$this->ftp->put($fileNameToUpload, $file, 1)){
                                 $this->log->customError('Unable to upload file '.$file.', id: '.$fileToUpload['id'].' non presente', ['logMail' => false]);
                                 continue;
                             }
