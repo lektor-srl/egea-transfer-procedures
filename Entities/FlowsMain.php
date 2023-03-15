@@ -192,8 +192,8 @@ class FlowsMain{
 
                         foreach ($filesToUpload as $fileToUpload){
                             $file = Config::$winShare.'/OUT/'.$utility['sharedFolder'].'/'.$fileToUpload['nome_flusso'];
-                            //$remoteFolder = $utility['ftpFolder'].'/LET/UP/';
-                            $remoteFolder = $utility['ftpFolder'].'/LET/UP/TEST/'; //da attivare in fase di test
+                            $remoteFolder = $utility['ftpFolder'].'/LET/UP/';
+                            //$remoteFolder = $utility['ftpFolder'].'/LET/UP/TEST/'; //da attivare in fase di test
 
                             if(!is_file($file)){
                                 $this->log->customError('File '.$file.', id: '.$fileToUpload['id'].' non presente', ['logMail' => false]);
