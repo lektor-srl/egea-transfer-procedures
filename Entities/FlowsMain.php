@@ -217,6 +217,11 @@ class FlowsMain{
                                 continue;
                             }
 
+                            //Sposto il file inviato correttamente nella cartella di backup
+                            if (!rename($file, Config::$winShare.'/OUT/'.$utility['sharedFolder'].'/backup/'.$fileToUpload['nome_flusso'])){
+                                $this->log->info('Unable to move the file into backup directory with id: '.$fileToUpload['id'], ['logMail' => false]);
+                            }
+
                             // Log locale
                             $query = $this->DBLocal->prepare("INSERT INTO files_upload (nome_flusso, codice_ente, sede_id) VALUES (?,?,?)");
                             $query->bind_param('sss',$fileToUpload['nome_flusso'], $utility['codice_ente'], $utility['sede_id']);
