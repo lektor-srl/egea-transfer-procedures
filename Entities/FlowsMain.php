@@ -181,7 +181,7 @@ class FlowsMain{
                             ->query("SELECT id, nome_flusso, codice_ente, sede_id 
                                             FROM flussi_file 
                                                 WHERE codice_ente = '".$utility['codice_ente']."'
-                                                AND sede_id = '".$utility['sede_id']."'                                                          
+                                              --  AND sede_id = '".$utility['sede_id']."'                                                          
                                                 AND flag_esportato_cartella_out = 1
                                                 AND flag_trasferimento_cartella_out = 0"); // Prendo quelli non ancora inviati
 
