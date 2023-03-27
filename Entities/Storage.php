@@ -66,9 +66,14 @@ class Storage extends StorageClient{
 
             $lettureDB = $this->getLettureDB($params);
 
+            $this->log->info("Trovati seguenti progressivi: " . json_encode($lettureDB['progressivi']));
 
             /** Per ogni progressivo mi recupero le foto dal bucket di google */
+            $c = 0; // Contatore foto totali per singolo progressivo
             foreach ($lettureDB['progressivi'] as $progressivo){
+                //Raggruppo per progrssivo
+                $this->createFolder(Config::$pathAttachments . $utility['name'] . "/" . $progressivo);
+                $c = 0;
                 $fileNames = []; // resetto i nomi dei files ad ogni nuovo progressivo
 
                 // Get the bucket information
@@ -105,7 +110,9 @@ class Storage extends StorageClient{
 
                             // Inserito controllo e continuo se la singola foto va in errore
                             try{
-                                $object->downloadToFile(Config::$pathAttachments . $utility['name'] . "/" . $newName);
+                                // Raggruppo per progressivi
+                                $object->downloadToFile(Config::$pathAttachments . $utility['name'] . "/" . $progressivo . "/". $newName);
+                                $c++;
                             }catch (exception $e){
                                 $dateTime = new DateTime();
                                 $logText = PHP_EOL.$dateTime->format('Y-m-d H:i:s')." - Line: ".$e->getLine().' - Warning: '.$e->getMessage();
@@ -122,7 +129,7 @@ class Storage extends StorageClient{
 
                     }
                 }
-
+                $this->log->info("Scaricate $c foto per progressivo $progressivo");
             }
 
             return $this->attachmentsDownloaded;
@@ -245,10 +252,20 @@ class Storage extends StorageClient{
     {
         try {
             $contentType = $object->info()['contentType'] ?? $object->info()['kind'];
+//
+//            if (false
+//                || $contentType != 'image/jpeg' // Controlla il formato della foto
+//            ) {
+//                $this->log->customError('Oggetto scartato - tipologia: ' . $contentType . " - name: ".$object->name);
+//                return false; }
 
-            if (false
-                || $contentType != 'image/jpeg' // Controlla il formato della foto
-            ) { return false; }
+            if($object->name()){
+                if(!str_contains($object->name(), '.jpg')){
+                    $this->log->customError('Oggetto scartato - tipologia: ' . $contentType . " - name: ".$object->name(), ['logMail' => false]);
+                    return false;
+                }
+            }
+
 
             return true;
 
