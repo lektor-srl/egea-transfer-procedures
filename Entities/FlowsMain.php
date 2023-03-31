@@ -45,6 +45,7 @@ class FlowsMain{
             switch ($this->mode) {
                 case 'download':
                     $nDownload = 0;
+
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Downloading files from "'. $utility['name'].'"');
 
@@ -204,7 +205,7 @@ class FlowsMain{
                             Viene fatto per gestire la spedizione parziale di una lavorazione
                              */
                             $fileNameToUpload = $remoteFolder.date('YmdHis').'_'.$fileToUpload['nome_flusso'];
-                            if(!$this->ftp->put($fileNameToUpload, $file, 1)){
+                            if(!$this->ftp->put($fileNameToUpload, $file, FTP_BINARY)){
                                 $this->log->customError('Unable to upload file '.$file.', id: '.$fileToUpload['id'].' non presente', ['logMail' => false]);
                                 continue;
                             }
