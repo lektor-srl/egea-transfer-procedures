@@ -61,6 +61,8 @@ class AttachmentsMain{
 
             switch ($this->mode){
                 case 'download':
+                    $params['currentBatch'] = DB::getInstance('local')->query("select max(batch) as batch from attachments_upload")->fetch_object()->batch + 1;
+
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Downloading attachments from "'. $utility['name'].'"');
 

@@ -82,6 +82,13 @@ class Storage extends StorageClient{
                     'prefix' => 'foto/' . $utility['name'] . '/lav_' . $progressivo
                 ]);
 
+                // Inject the pictures already downloaded
+                $params['attachmentsDB'] = $this->getAttachmentsDB();
+
+//              $params['attachmentsDB'] = [
+//                  'foto/egea_alse/lav_000211/000000/00000/0000/000/000211_000001_1_20220624_111513.jpg' => true,
+//              ];
+
                 /** Per ogni oggetto del bucket, eseguo i controlli e scarico i metadata della foto */
                 foreach ($objects as $object) {
                     if(!$this->checkObject($object, $params)){
@@ -112,7 +119,25 @@ class Storage extends StorageClient{
                             try{
                                 // Raggruppo per progressivi
                                 $object->downloadToFile(Config::$pathAttachments . $utility['name'] . "/" . $progressivo . "/". $newName);
-                                $c++;
+
+                                // Inserisco il file in DB locale cosi da non riscaricarlo più
+                                $insertAttachment = DB::getInstance('local')->prepare("INSERT INTO attachments_upload (filename, batch, uploaded_at, lavorazione_progressivo, utility) VALUES (?, ?, ?, ?, ?)");
+
+                                $date = new DateTime();
+                                $date = $date->format('Y-m-d H:i:s');
+
+                                $insertAttachment->bind_param('sisis',
+                                    $data['originalFilename'],
+                                    $params['currentBatch'],
+                                    $date,
+                                    $progressivo,
+                                    $utility['name']
+                                );
+                                if($insertAttachment->execute()){
+                                    $c++;
+                                };
+
+
                             }catch (exception $e){
                                 $dateTime = new DateTime();
                                 $logText = PHP_EOL.$dateTime->format('Y-m-d H:i:s')." - Line: ".$e->getLine().' - Warning: '.$e->getMessage();
@@ -259,6 +284,7 @@ class Storage extends StorageClient{
 //                $this->log->customError('Oggetto scartato - tipologia: ' . $contentType . " - name: ".$object->name);
 //                return false; }
 
+            // Check if is a jpeg image
             if($object->name()){
                 if(!str_contains($object->name(), '.jpg')){
                     $this->log->customError('Oggetto scartato - tipologia: ' . $contentType . " - name: ".$object->name(), ['logMail' => false]);
@@ -266,6 +292,11 @@ class Storage extends StorageClient{
                 }
             }
 
+            // Check if is already downloaded and uploaded to ftp
+             if(isset($params['attachmentsDB'][$object->name()])){
+                $this->log->customError('Oggetto scartato - Gia scaricato' . " - name: ".$object->name(), ['logMail' => false]);
+                return false;
+            }
 
             return true;
 
@@ -292,5 +323,20 @@ class Storage extends StorageClient{
             throw $e;
         }
 
+    }
+
+    private function getAttachmentsDB():array
+    {
+        $data = [];
+        $sql = 'SELECT filename FROM attachments_upload';
+
+        $result = DB::getInstance('local')->query($sql);
+        while($row = $result->fetch_assoc()){
+            // Creo un array associativo perchè controllerò la presenza della chiave per essere più veloce
+            $data[$row['filename']] = true;
+        }
+
+
+        return $data;
     }
 }
