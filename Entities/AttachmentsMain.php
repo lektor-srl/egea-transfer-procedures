@@ -82,17 +82,32 @@ class AttachmentsMain{
                 case 'upload':
                     foreach (Config::$utilities as $utility){
                         $this->log->info('Uploading attachments to "'. $utility['ftpFolder'].'"');
+                        $data = []; //Lo resetto per ogni utility
+                        //ciclo le lavorazioni
+                        $lavorazioni = array_diff(scanDir(Config::$pathAttachments.$utility['name'].'/'), ['.', '..']);
 
-                        $data = $this->ftp->uploadFolder('/'.$utility['ftpFolder'].'/IMG/UP/', $utility['name'].'/');
+                        foreach ($lavorazioni as $lavorazione){
+                            $folder = '/'.$utility['ftpFolder'].'/IMG/UP/PARK/'.$lavorazione.'/';
+                            if(!is_dir($folder)){
+                                $this->ftp->mkdir($folder, true);
+                                $this->log->info('Create folder on ftp server "'.$folder.'"');
+                            }
+                            $data = $this->ftp->uploadFolder('/'.$utility['ftpFolder'].'/IMG/UP/PARK/'.$lavorazione.'/', $utility['name'].'/'.$lavorazione.'/');
 
-                        foreach ($data as $datum){
-                            // Fatto in questo modo per avere un array complessivo delle foto caricate correttamente di tutte le utility
-                            $this->attachmentsUploaded[] = $datum;
+                            foreach ($data as $datum){
+                                // Fatto in questo modo per avere un array complessivo delle foto caricate correttamente di tutte le lavorazioni di tutte le utility
+                                $this->attachmentsUploaded[] = $datum;
+                            }
+
+                            $this->log->info(count($data).' attachments uploaded for utility '.$utility['name'].' and lavorazione '.$lavorazione);
                         }
-                        $this->log->info(count($data).' attachments uploaded for utility '.$utility['name']);
+                        //$data = $this->ftp->uploadFolder('/'.$utility['ftpFolder'].'/IMG/UP/', $utility['name'].'/');
+
+
+
                     }
 
-                    $this->log->info(count($this->attachmentsUploaded).' attachments uploaded.');
+                    $this->log->info(count($this->attachmentsUploaded).' total attachments uploaded.');
 
                     // Remove only the file are correctly uploaded
                     $this->storage->removeLocalFiles($this->attachmentsUploaded);
