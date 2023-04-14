@@ -53,7 +53,7 @@ class Storage extends StorageClient{
         try {
             /**
                 1) prendo tutte le lavorazioni secondo la data di riferimento
-                2) per ogni lavorazione, mi prendo il progressivo e cerco sul bucker filtrando per quella lavorazione => /foto/lav_n
+                2) per ogni lavorazione, mi prendo il progressivo e cerco sul bucket filtrando per quella lavorazione => /foto/lav_n
                 3) mi prendo tutte le foto di questa lavorazione
              */
 
@@ -71,7 +71,7 @@ class Storage extends StorageClient{
             /** Per ogni progressivo mi recupero le foto dal bucket di google */
             $c = 0; // Contatore foto totali per singolo progressivo
             foreach ($lettureDB['progressivi'] as $progressivo){
-                //Raggruppo per progrssivo
+                //Raggruppo per progressivo
                 $this->createFolder(Config::$pathAttachments . $utility['name'] . "/" . $progressivo);
                 $c = 0;
                 $fileNames = []; // resetto i nomi dei files ad ogni nuovo progressivo
