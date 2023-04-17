@@ -118,7 +118,7 @@ class Storage extends StorageClient{
                             // Inserito controllo e continuo se la singola foto va in errore
                             try{
                                 // Raggruppo per progressivi
-                                $object->downloadToFile(Config::$pathAttachments . $utility['name'] . "/" . $progressivo . "/". $newName);
+                                //$object->downloadToFile(Config::$pathAttachments . $utility['name'] . "/" . $progressivo . "/". $newName);
 
                                 // Inserisco il file in DB locale cosi da non riscaricarlo più
                                 $insertAttachment = DB::getInstance('local')->prepare("INSERT INTO attachments_upload (filename, batch, uploaded_at, lavorazione_progressivo, utility) VALUES (?, ?, ?, ?, ?)");
@@ -220,11 +220,13 @@ class Storage extends StorageClient{
     {
         $data = [];
         $progressivi = [];
+        $progressivi_ente = [];
 
         $sql = 'SELECT 	l.progressivo, 
                             l.sequenza, 
                             l.codice_utente, 
-                            l.matricola, 	
+                            l.matricola,
+                            lv.ente,
                             DATE_FORMAT(CONCAT(
                                     SUBSTRING(lv.lavorazione_data_out, 1,4), "-",
                                     SUBSTRING(lv.lavorazione_data_out, 5,2), "-",
@@ -246,6 +248,7 @@ class Storage extends StorageClient{
            "progressivo_sequenza" = [
                "codice_utente" = n
                "matricola" = n
+               "ente" = n
            ]
         */
             $progressivo = str_pad($row['progressivo'], 6, '0', STR_PAD_LEFT);
@@ -257,9 +260,28 @@ class Storage extends StorageClient{
 
             // Popolo l'array con solo la lista dei progressivi
             $progressivi[] = $progressivo;
+
+            //Popolo l'array con l'associazione progressivo - ente
+            $progressivi_ente[$progressivo] = $row['ente'];
+
+
+
         }
 
         $progressivi = array_unique($progressivi);
+
+        // Inseriso a DB le associazioni progressivo_ente
+        foreach($progressivi_ente as $progressivo => $ente){
+            $query = DB::getInstance('local')->prepare("INSERT INTO progressivo_ente (progressivo, ente) VALUES (?, ?)");
+            $query->bind_param('ii', $progressivo, $ente);
+            try {
+                $query->execute();
+            }catch (\mysqli_sql_exception $ex){
+                // Mi aspetto che vada in eccezione gestito se tenta l'inserimento di un valore duplicato, ma non interrompo lo script
+                $this->log->exceptionError($ex, ['logMail' => false]);
+            }
+        }
+
 
         return [
             'data' => $data,
