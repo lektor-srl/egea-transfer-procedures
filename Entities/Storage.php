@@ -190,7 +190,6 @@ class Storage extends StorageClient{
     {
         try {
 
-            //test
             // Il file ha il seguente formato: progressivo_sequenza_tipo_dataora.jpg
             $record = null;
             $strings = explode('/', $filePath);
