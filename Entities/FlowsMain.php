@@ -47,6 +47,11 @@ class FlowsMain{
                     $nDownload = 0;
 
                     foreach (Config::$utilities as $utility){
+                        // Salto implanet perchè è fatto solo per gestire le foto
+                        if ($utility['name'] === 'egea_implanet'){
+                            continue;
+                        }
+
                         $this->log->info('Downloading files from "'. $utility['name'].'"');
 
                         // Scan ftp Folder for index files
@@ -177,6 +182,10 @@ class FlowsMain{
                     $nUpload = 0;
 
                     foreach (Config::$utilities as $utility){
+                        // Salto implanet perchè è fatto solo per gestire le foto
+                        if ($utility['name'] === 'egea_implanet'){
+                            continue;
+                        }
                         $query = $this
                             ->DBGoogle
                             ->query("SELECT id, nome_flusso, codice_ente, sede_id 

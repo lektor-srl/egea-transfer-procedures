@@ -71,6 +71,33 @@ class Storage extends StorageClient{
             /** Per ogni progressivo mi recupero le foto dal bucket di google */
             $c = 0; // Contatore foto totali per singolo progressivo
             foreach ($lettureDB['progressivi'] as $progressivo){
+
+                if($utility['name'] === 'egea_implanet'){
+                    // Capisco a quale ente fa riferimento questa lavorazione prendendo le info dal DB locale
+                    $ente_id = DB::getInstance('local')->query('SELECT ente FROM progressivo_ente WHERE progressivo = '.$progressivo)->fetch_object()->ente;
+                    if(!is_null($ente_id)){
+                        // 1-6 alpiacque | 2-5 tecnoedil | 3-7 alse
+                        switch ($ente_id){
+                            case 1:
+                            case 6:
+                                $utility['partita_iva'] = '02660800042';
+                                break;
+
+                            case 2:
+                            case 5:
+                                $utility['partita_iva'] = '00527910046';
+                                break;
+
+                            case 3:
+                            case 7:
+                                $utility['partita_iva'] = '02537750040';
+                                break;
+                        }
+                    }else{
+                        $this->log->customError('ente_id not found for progressivo '. $progressivo);
+                    }
+                }
+
                 //Raggruppo per progressivo
                 $this->createFolder(Config::$pathAttachments . $utility['name'] . "/" . $progressivo);
                 $c = 0;
@@ -190,7 +217,6 @@ class Storage extends StorageClient{
     {
         try {
 
-            //test
             // Il file ha il seguente formato: progressivo_sequenza_tipo_dataora.jpg
             $record = null;
             $strings = explode('/', $filePath);
@@ -221,11 +247,13 @@ class Storage extends StorageClient{
     {
         $data = [];
         $progressivi = [];
+        $progressivi_ente = [];
 
         $sql = 'SELECT 	l.progressivo, 
                             l.sequenza, 
                             l.codice_utente, 
-                            l.matricola, 	
+                            l.matricola,
+                            lv.ente,
                             DATE_FORMAT(CONCAT(
                                     SUBSTRING(lv.lavorazione_data_out, 1,4), "-",
                                     SUBSTRING(lv.lavorazione_data_out, 5,2), "-",
@@ -247,6 +275,7 @@ class Storage extends StorageClient{
            "progressivo_sequenza" = [
                "codice_utente" = n
                "matricola" = n
+               "ente" = n
            ]
         */
             $progressivo = str_pad($row['progressivo'], 6, '0', STR_PAD_LEFT);
@@ -258,9 +287,28 @@ class Storage extends StorageClient{
 
             // Popolo l'array con solo la lista dei progressivi
             $progressivi[] = $progressivo;
+
+            //Popolo l'array con l'associazione progressivo - ente
+            $progressivi_ente[$progressivo] = $row['ente'];
+
+
+
         }
 
         $progressivi = array_unique($progressivi);
+
+        // Inseriso a DB le associazioni progressivo_ente
+        foreach($progressivi_ente as $progressivo => $ente){
+            $query = DB::getInstance('local')->prepare("INSERT INTO progressivo_ente (progressivo, ente) VALUES (?, ?)");
+            $query->bind_param('ii', $progressivo, $ente);
+            try {
+                $query->execute();
+            }catch (\mysqli_sql_exception $ex){
+                // Mi aspetto che vada in eccezione gestito se tenta l'inserimento di un valore duplicato, ma non interrompo lo script
+                $this->log->exceptionError($ex, ['logMail' => false]);
+            }
+        }
+
 
         return [
             'data' => $data,

@@ -87,6 +87,39 @@ class AttachmentsMain{
                         $lavorazioni = array_diff(scanDir(Config::$pathAttachments.$utility['name'].'/'), ['.', '..']);
 
                         foreach ($lavorazioni as $lavorazione){
+
+                            /**
+                             * Controllo verticale per implanet.
+                             * Questa utility legge per i tre enti, ma le foto devono andare rispettivamente nelle 3 cartelle.
+                             * Non c'è una cartella ftp destinata ad implanet
+                             */
+                            if($utility['name'] === 'egea_implanet'){
+                                // Capisco a quale ente fa riferimento questa lavorazione prendendo le info dal DB locale
+                                $ente_id = DB::getInstance('local')->query('SELECT ente FROM progressivo_ente WHERE progressivo = '.$lavorazione)->fetch_object()->ente;
+                                if(!is_null($ente_id)){
+                                    // 1-6 alpiacque | 2-5 tecnoedil | 3-7 alse
+                                    switch ($ente_id){
+                                        case 1:
+                                        case 6:
+                                            $utility['ftpFolder'] = 'neta2a_prod_alpiacque';
+                                            break;
+
+                                        case 2:
+                                        case 5:
+                                            $utility['ftpFolder'] = 'neta2a_prod_tecnoedl';
+                                            break;
+
+                                        case 3:
+                                        case 7:
+                                            $utility['ftpFolder'] = 'neta2a_prod_alse';
+                                            break;
+                                    }
+                                }else{
+                                    $this->log->customError('ente_id not found for progressivo '. $lavorazione);
+                                }
+                            }
+
+
                             $folder = '/'.$utility['ftpFolder'].'/IMG/UP/PARK/'.$lavorazione.'/';
                             if(!is_dir($folder)){
                                 $this->ftp->mkdir($folder, true);
