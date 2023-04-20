@@ -71,6 +71,33 @@ class Storage extends StorageClient{
             /** Per ogni progressivo mi recupero le foto dal bucket di google */
             $c = 0; // Contatore foto totali per singolo progressivo
             foreach ($lettureDB['progressivi'] as $progressivo){
+
+                if($utility['name'] === 'egea_implanet'){
+                    // Capisco a quale ente fa riferimento questa lavorazione prendendo le info dal DB locale
+                    $ente_id = DB::getInstance('local')->query('SELECT ente FROM progressivo_ente WHERE progressivo = '.$progressivo)->fetch_object()->ente;
+                    if(!is_null($ente_id)){
+                        // 1-6 alpiacque | 2-5 tecnoedil | 3-7 alse
+                        switch ($ente_id){
+                            case 1:
+                            case 6:
+                                $utility['partita_iva'] = '02660800042';
+                                break;
+
+                            case 2:
+                            case 5:
+                                $utility['partita_iva'] = '00527910046';
+                                break;
+
+                            case 3:
+                            case 7:
+                                $utility['partita_iva'] = '02537750040';
+                                break;
+                        }
+                    }else{
+                        $this->log->customError('ente_id not found for progressivo '. $progressivo);
+                    }
+                }
+
                 //Raggruppo per progressivo
                 $this->createFolder(Config::$pathAttachments . $utility['name'] . "/" . $progressivo);
                 $c = 0;
@@ -118,7 +145,7 @@ class Storage extends StorageClient{
                             // Inserito controllo e continuo se la singola foto va in errore
                             try{
                                 // Raggruppo per progressivi
-                                //$object->downloadToFile(Config::$pathAttachments . $utility['name'] . "/" . $progressivo . "/". $newName);
+                                $object->downloadToFile(Config::$pathAttachments . $utility['name'] . "/" . $progressivo . "/". $newName);
 
                                 // Inserisco il file in DB locale cosi da non riscaricarlo più
                                 $insertAttachment = DB::getInstance('local')->prepare("INSERT INTO attachments_upload (filename, batch, uploaded_at, lavorazione_progressivo, utility) VALUES (?, ?, ?, ?, ?)");
