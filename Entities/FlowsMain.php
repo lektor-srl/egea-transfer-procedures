@@ -205,7 +205,7 @@ class FlowsMain{
                             $remoteFolder = $utility['ftpFolder'].'/LET/UP/';
                             //$remoteFolder = $utility['ftpFolder'].'/LET/UP/TEST/'; //da attivare in fase di test
 
-                            if(!is_file($file)){
+                            if(!file_exists($file)){
                                 $this->log->customError('File '.$file.', id: '.$fileToUpload['id'].' non presente', ['logMail' => false]);
                                 continue;
                             }
